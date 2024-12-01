@@ -85,7 +85,7 @@
         dest: "{{ scala_install_loc }}"
         mode: '0766'
       when: scala_present.stdout.find('Scala') == -1
-      become: true
+      # become: true
       become_user: "{{ user }}"
       tags: scala_download
 
@@ -95,7 +95,7 @@
       register: result
       changed_when: result.rc == 0
       when: scala_present.stdout.find('Scala') == -1
-      tags: scala_download_extract
+      tags: scala_extract
 
     - name: Install Scala
       ansible.builtin.shell: chmod +x cs && ./cs setup -y
