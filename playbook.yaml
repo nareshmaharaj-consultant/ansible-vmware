@@ -1,0 +1,504 @@
+# Configure EL9
+# Add Host Configurations
+- name: General Configuration for all Hosts
+  hosts: all
+  become: true
+  tasks:
+    - name: Include variable of hostsnames for all machines
+      ansible.builtin.include_vars:
+        file: hosts.yaml
+        name: hosts_names_ips
+      tags: host_name
+
+    - name: "Update Hosts file /etc/hosts"
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        state: present
+        line: "{{ item }}"
+      loop: "{{ hosts_names_ips.hostname }}"
+      tags: host_name
+
+    - name: Get hostname of current host
+      ansible.builtin.shell: echo $HOSTNAME
+      register: result_hostname
+      changed_when: false
+      tags: host_name
+
+    - name: "Insert hostname to /etc/hosts"
+      ansible.builtin.lineinfile:
+        dest: /etc/hosts
+        line: "127.0.0.1 {{ result_hostname.stdout }}"
+      tags: host_name
+
+# --  Install Libraries Required from list -- #
+- name: Install Required Libaries
+  hosts: deploy_machines
+  become: true
+  tasks:
+    - name: Get Jenkins Node Public Key
+      ansible.builtin.set_fact:
+        jenkins_node_key: "{{ lookup('file', 'jenkins_node_pub_key/id_rsa.pub', fail_on_missing=true) }}"
+
+    - name: Add Jenkins Node Key to Authorized Keys
+      ansible.posix.authorized_key:
+        user: "{{ user }}"
+        key: "{{ jenkins_node_key }}"
+        state: present
+
+    - name: Install Libraries
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ libs }}"
+      tags: libs
+
+    # --  Create Soft links for Java executables -- #
+    - name: Link Java Executables
+      ansible.builtin.file:
+        src: "{{ java_dir_loc }}{{ item.src }}"
+        dest: "{{ java_dir_link_to }}{{ item.dest }}"
+        state: link
+      loop:
+        - { src: java, dest: java }
+        - { src: javac, dest: javac }
+      tags: java-links
+
+    # -- Install Scala -- #
+    - name: Remove Scala Previous Install
+      ansible.builtin.file:
+        path: "{{ scala_install_loc }}"
+        state: absent
+      tags: scala
+
+    - name: Get Scala Info
+      ansible.builtin.shell:
+        cmd: "set -o pipefail;[ -f {{ scala_binary }} ] && echo Scala || echo 0"
+      register: scala_present
+      changed_when: scala_present.stdout == ""
+      become: true
+      become_user: "{{ user }}"
+      tags: scala_i
+
+    - name: Download Scala
+      ansible.builtin.get_url:
+        url: "{{ scala_download_url_arm }}"
+        dest: "{{ scala_install_loc }}"
+        mode: '0766'
+      when: scala_present.stdout.find('Scala') == -1
+      become: true
+      become_user: "{{ user }}"
+      tags: scala_download
+
+    - name: Gunzip extract
+      ansible.builtin.shell:
+        cmd: gunzip -cf {{ scala_install_loc }} > cs;ls -1 cs
+      register: result
+      changed_when: result.rc == 0
+      when: scala_present.stdout.find('Scala') == -1
+      tags: scala_download_extract
+
+    - name: Install Scala
+      ansible.builtin.shell: chmod +x cs && ./cs setup -y
+      when: scala_present.stdout.find('Scala') == -1
+      register: result
+      changed_when: result.rc == 0
+      become: true
+      become_user: "{{ user }}"
+      tags: scala_install
+
+    - name: Remove Scala Install
+      ansible.builtin.file:
+        path: "{{ scala_install_loc }}"
+        state: absent
+      tags: scala_clean
+
+    # Install Python
+    - name: Group Install Development Tools
+      ansible.builtin.dnf:
+        name: "@Development Tools"
+        state: present
+      become: true
+      tags:
+        - py-install-d
+
+    - name: Install Python Dependencies
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+      loop: "{{ python_libs }}"
+      tags:
+        - py-install-d
+
+    - name: Get Python Info
+      ansible.builtin.shell:
+        cmd: "set -o pipefail;[ -f {{ python_exec_path }} ] && echo `{{ python_exec_path }} --version` || echo 0"
+      register: python_present
+      changed_when: python_present.stdout.find(python_version) == -1
+      tags:
+        - py-install-i
+
+    - name: Get Python Install URL
+      ansible.builtin.get_url:
+        url: "{{ python_bin_url }}"
+        dest: "{{ python_download_to_dir }}"
+        mode: "0766"
+      when: python_present.stdout.find(python_version) == -1
+      become: true
+      become_user: "{{ user }}"
+      tags:
+        - py-install-u
+
+    - name: Extract Python URL
+      ansible.builtin.unarchive:
+        src: "{{ python_download_to_dir }}/{{ python_bin_name }}.tgz"
+        dest: "{{ python_download_to_dir }}"
+        remote_src: true
+      when: python_present.stdout.find(python_version) == -1
+      become: true
+      become_user: "{{ user }}"
+      tags:
+        - py-install-x
+
+    - name: Configure Python
+      ansible.builtin.command:
+        chdir: "{{ python_unpacked_dir }}"
+        cmd: ./configure --enable-optimizations
+      when: python_present.stdout.find(python_version) == -1
+      changed_when: false
+      become: true
+      become_user: "{{ user }}"
+      tags:
+        - py-install-c
+
+    - name: Make Python
+      ansible.builtin.command:
+        cmd: make -j 4
+        chdir: "{{ python_unpacked_dir }}"
+      when: python_present.stdout.find(python_version) == -1
+      changed_when: false
+      become: true
+      become_user: "{{ user }}"
+      tags:
+        - py-install-m
+
+    - name: Install Python
+      ansible.builtin.command:
+        cmd: sudo make altinstall
+        chdir: "{{ python_unpacked_dir }}"
+      when: python_present.stdout.find(python_version) == -1
+      register: result
+      changed_when: result.rc == 0
+      tags:
+        - py-install-a
+
+    # -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+    - name: Python pip dependency
+      ansible.builtin.shell: |
+        set -o pipefail
+        pip install '{{ pip_min_dep }}' > /dev/null 2>&1
+        pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+      register: pip_usage_dep_req
+      changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+      become: true
+      tags: pip_dep
+
+    # -- Python Packages Installed using pip -- #
+    - name: Python Packages Required Using pip
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ python_pip_installs_req | default([]) }}"
+      when: python_pip_installs_req | length > 0
+      tags: pip_lib_installs
+
+    # --  TCP Keep Alive -- #
+    - name: Get TCP Keep Alive Settings
+      ansible.builtin.shell: set -o pipefail;cat /etc/ssh/sshd_config | grep ^TCPKeepAlive | awk {'print $2'} || true
+      register: tcp_keep_alive
+      changed_when: tcp_keep_alive.stdout.find('yes') == -1
+      tags: sshd-2
+
+    - name: Set Keep Alive SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?TCPKeepAlive'
+        line: 'TCPKeepAlive yes'
+        state: present
+      when: tcp_keep_alive.stdout.find('yes') == -1
+      tags: sshd-2
+
+    - name: Restart SSHD Service
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+      when: tcp_keep_alive.stdout.find('yes') == -1
+      tags: sshd
+
+    # -- Firewall Settings -- #
+    - name: Gather firewall info before changes
+      ansible.posix.firewalld_info:
+        active_zones: true
+      register: before_fw_chg
+      tags: firewall_before
+
+    - name: Add Firewall Port
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        state: enabled
+        immediate: true
+      loop: "{{ firewall_ports | default([]) }}"
+      when: firewall_ports | length > 0
+      tags: firewall_add
+
+    - name: Gather firewall info after changes
+      ansible.posix.firewalld_info:
+        active_zones: true
+      register: after_fw_chg
+      tags: firewall_after
+
+    - name: Compare Firewall Open Ports Before & After Results
+      ansible.builtin.set_fact:
+        all_ports_open: "{{ (after_fw_chg.firewalld_info.zones.public.ports | difference(before_fw_chg.firewalld_info.zones.public.ports)) }}"
+      tags: firewall_i
+
+    - name: Restart network service for firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: restarted
+      when: all_ports_open | length > 0
+      tags: firewall_r
+
+    # -- Disable Swap for DBs -- #
+    - name: Check Swapon devices
+      ansible.builtin.shell: |
+        set -o pipefail
+        cat /proc/swaps | egrep -v ^File || true | wc -l
+      register: swap_enabled
+      changed_when: swap_enabled.stdout.find("0") == -1
+      tags: swap
+
+    - name: Disable Swap
+      ansible.builtin.shell:
+        cmd: set -o pipefail;swapoff -a;sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab;cat /proc/meminfo | grep Swap | grep Total | awk '{print $2}'
+      register: swap_size
+      changed_when: swap_size.stdout.find('0') == -1
+      when: swap_enabled.stdout.find('0') == -1
+      tags: swap
+
+# --  JENKINS: Install Libraries for CI/CD -- #
+- name: Install Jenkin Libaries
+  hosts: jenkins
+  become: true
+  tasks:
+    - name: Group Install Development Tools
+      ansible.builtin.dnf:
+        name: "@Development Tools"
+        state: present
+      become: true
+      tags:
+        - py-install-d
+
+    - name: Import Jenkins GPG Key URL
+      ansible.builtin.rpm_key:
+        state: present
+        key: "{{ jenkins_gpg_key_url }}"
+      become: true
+      tags: jenkins-key
+
+    - name: Add Jenkins repository
+      ansible.builtin.get_url:
+        url: "{{ jenkins_repo_url }}"
+        dest: "{{ jenkins_repo_dest }}"
+        mode: "0644"
+      tags: jenkins-repo
+      become: true
+
+    - name: "Ignore cert check"
+      ansible.builtin.lineinfile:
+        path: /etc/yum.repos.d/jenkins.repo
+        state: present
+        line: "sslverify={{ jenkins_ssl_verify }}"
+      tags: libs
+
+    - name: Install Jenkin Dependencies
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ libs }}"
+      tags: libs
+
+    - name: Restart service jenkins, in all cases, also issue daemon-reload to pick up config changes
+      ansible.builtin.systemd_service:
+        state: started
+        daemon_reload: true
+        enabled: true
+        name: jenkins
+      tags: jenkins-service
+
+    - name: Get Firewall Info for Jenkins
+      ansible.builtin.shell:
+        cmd: "set -o pipefail;netstat -tuln | awk '{print $4}' | grep $8080 | sed 's/:*//'"
+      register: jenkins_firewall_service_up
+      changed_when: jenkins_firewall_service_up.stdout.find("8080") == -1
+      tags: firewall
+
+    - name: Firewall Port Exception for Jenkins
+      ansible.builtin.shell: |
+        # Define the port for Jenkins
+        YOURPORT=8080
+
+        # Define the "permanent" option for firewall commands
+        PERM="--permanent"
+
+        # Define a variable for Jenkins service configuration
+        SERV="$PERM --service=jenkins"
+
+        # Step 1: Create a new service named "jenkins" in the firewall
+        firewall-cmd $PERM --new-service=jenkins
+
+        # Step 2: Set a short description for the Jenkins service
+        firewall-cmd $SERV --set-short="Jenkins ports"
+
+        # Step 3: Set a detailed description for the Jenkins service
+        firewall-cmd $SERV --set-description="Jenkins port exceptions"
+
+        # Step 4: Add the specified port (8080) for the Jenkins service
+        firewall-cmd $SERV --add-port=$YOURPORT/tcp
+
+        # Step 5.1: Permanently add the Jenkins service to the firewall
+        sudo firewall-cmd --zone=public --add-service=jenkins --permanent
+
+        # Step 5.2: Permanently add the Jenkins port to the firewall
+        sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
+
+        # Step 6: Allow the HTTP service in the public zone permanently
+        firewall-cmd --zone=public --add-service=http --permanent
+
+        # Step 7: Reload the firewall to apply changes
+        firewall-cmd --reload
+      args:
+        executable: /usr/bin/bash
+      when: jenkins_firewall_service_up.stdout.find("8080") == -1
+      register: result
+      changed_when: result.rc == 0
+      tags: firewall
+
+    - name: Jenkins UI Password
+      ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_pwd
+      changed_when: jenkins_pwd.stdout.find("") == -1
+      when: jenkins_pwd_show
+      tags: jenkins-pwd
+
+    - name: Print Jenkins Pwd
+      ansible.builtin.debug:
+        msg: "Jenkins Login pwd: {{ jenkins_pwd.stdout }}"
+      when: jenkins_pwd_show
+      tags: jenkins-pwd
+
+    # -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+    - name: Python pip dependency
+      ansible.builtin.shell:
+        cmd: set -o pipefail;pip install '{{ pip_min_dep }}' > /dev/null 2>&1;pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+      register: pip_usage_dep_req
+      changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+      become: true
+      tags: pip_dep
+
+    # -- Python Packages Installed using pip -- #
+    - name: Python Packages Required Using pip
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ python_pip_installs_req | default([]) }}"
+      when: python_pip_installs_req | length > 0
+      tags: pip_lib_installs
+
+# --  JENKINS Node: Install Libraries for CI/CD -- #
+- name: Install Jenkin NODE Libaries
+  hosts: jenkins-node
+  become: true
+  tasks:
+    # -- Add repo - check with yum repolist
+    - name: Add Docker Repo
+      ansible.builtin.yum_repository:
+        name: docker-ce-stable
+        description: Docker CE Repo
+        baseurl: https://download.docker.com/linux/centos/docker-ce.repo
+      tags: docker-repo
+
+    - name: Install Jenkin Dependencies
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ libs }}"
+      tags: libs
+
+    # -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+    - name: Python pip dependency
+      ansible.builtin.shell:
+        cmd: set -o pipefail;pip install '{{ pip_min_dep }}' > /dev/null 2>&1;pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+      register: pip_usage_dep_req
+      changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+      become: true
+      tags: pip_dep
+
+    # -- Python Packages Installed using pip -- #
+    - name: Python Packages Required Using pip
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ python_pip_installs_req | default([]) }}"
+      when: python_pip_installs_req | length > 0
+      tags: pip_lib_installs
+
+    # -- Install Docker libs
+    - name: Install Docker Libs
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ docker_libs }}"
+      tags: docker
+
+    - name: Ensure group "docker" exists
+      ansible.builtin.group:
+        name: docker
+        state: present
+      tags: docker-group
+
+    - name: Add the user to docker group
+      ansible.builtin.user:
+        name: "{{ user }}"
+        groups: docker
+        append: true
+      tags: docker-group
+
+    - name: Start Docker Service
+      ansible.builtin.systemd_service:
+        state: started
+        daemon_reload: true
+        enabled: true
+        name: docker
+      tags: docker
+
+    - name: Change docker.sock Permissions
+      ansible.builtin.file:
+        path: /var/run/docker.sock
+        mode: "0660"
+      tags: docker_perm
+
+    - name: Storing ssh public key for jenkins agent.
+      ansible.builtin.fetch:
+        src: "/home/{{ user }}/.ssh/id_rsa.pub"
+        dest: jenkins_node_pub_key/
+        flat: true
+      tags: get_jenkins_node_pub
+      become: true
+
+    - name: Mkdir for jenkins jobs
+      ansible.builtin.file:
+        path: /home/{{ user }}/jenkins_jobs
+        state: directory
+        mode: "0755"
+      tags: mkdir_jenkins_jobs
+      become: true

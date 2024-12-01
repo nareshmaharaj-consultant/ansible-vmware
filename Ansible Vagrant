@@ -1,0 +1,368 @@
+1. Ansible Vagrant - Execution Environments
+
+
+- HOST Dependencies:
+All machines python managed nodes need to have python3.9 ideally
+ssh $1 -t 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N ""'
+echo "nmaharaj ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+
+- - - -  - Control Node: - - - -  - 
+
+- Add ssh public keys from local machine to the host mmanaged nodes.
+Do this in Vagrant script as this is easier.
+
+https://tech.serhatteker.com/post/2020-11/add-ssh-public-key-to-vagrant/
+
+e.g. Add:
+config.vm.provision "shell", inline: <<-SHELL
+    cat /Users/nareshmaharaj/.ssh/id_ed25519.pub >> /home/vagrant/.ssh/authorized_key
+
+So you get:
+
+PUB_SSH_KEY_FILE="/Users/nareshmaharaj/.ssh/id_ed25519.pub"
+REMOTE_SSH_FILENAME="/home/vagrant/id_ed25519.pub"
+
+ALLOW_METRICS = false
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/centos8"
+  config.vm.box_check_update = false
+  config.vm.synced_folder "shared/", "/shared", create: true
+  config.vm.synced_folder "data/", "/data", create: true
+  config.vm.provision "shell", path: "swap.off.sh"
+  config.vm.provision "shell", path: "add-fw-rules.sh"
+  config.vm.provision "shell", path: "jdk11.sh"
+  config.vm.provision "shell", path: "tcp_keep_alive.sh"
+  config.vm.provision "file", source: "#{PUB_SSH_KEY_FILE}", destination: "#{REMOTE_SSH_FILENAME}"
+  config.vm.provision "shell", inline: <<-SHELL
+    cat "#{REMOTE_SSH_FILENAME}" >> /home/vagrant/.ssh/authorized_keys
+    rm "#{REMOTE_SSH_FILENAME}"  # Clean up after copying
+    echo "vagrant ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+  SHELL
+
+
+Have also added to allow no password when logging in with ssh
+echo "vagrant ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+
+
+- Create a python virtual envronment
+python3 -m venv ansible-env
+source ansible-env/bin/activate
+pip install --upgrade pip
+pip install ansible
+pip install argcomplete
+activate-global-python-argcomplete --user
+source ansible-env/bin
+ansible --version
+ansible localhost -m ping
+export PATH=$PATH:/Users/nareshmaharaj/ansible-env/bin/
+
+- Create the inventory
+cat <<EOF> inventory.ini
+[myhosts]
+broker01 ansible_host=192.168.56.151 ansible_ssh_user=vagrant ansible_ssh_private_key_file=/Users/nareshmaharaj/.ssh/id_ed25519 ansible_python_interpreter=/usr/local/bin/python3.12 ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+broker02 ansible_host=192.168.56.152 ansible_ssh_user=vagrant ansible_ssh_private_key_file=/Users/nareshmaharaj/.ssh/id_ed25519 ansible_python_interpreter=/usr/local/bin/python3.12 ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+broker03 ansible_host=192.168.56.153 ansible_ssh_user=vagrant ansible_ssh_private_key_file=/Users/nareshmaharaj/.ssh/id_ed25519 ansible_python_interpreter=/usr/local/bin/python3.12 ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+EOF
+
+or yaml:
+
+
+Note:
+ansible_ssh_user is the ssh user in the managed node
+ansible_ssh_private_key_file is the private key location on the control node
+ansible_python_interpreter which python to be used on the managed node
+ansible_ssh_extra_args extra ssh args for e.g. I dont want to add fingerprints to known hosts files.
+
+- Verify the inventory #
+ansible-inventory -i inventory.ini --list
+
+- Ping Inventory
+ansible myhosts -m ping -i inventory.ini
+
+broker01 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+broker02 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+broker03 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+
+
+- - - -  - Managed Nodes: - - - -  - 
+
+
+- - - -  - Execution Environments EE - - - -  - 
+
+- Self Built image docker
+
+Ensure Docker Desktop is running for testing
+
+pip3 install ansible-navigator
+ansible-navigator --version
+ansible-builder --version
+
+mkdir ee;cd ee
+cat <<EOF> execution-environment.yml
+version: 3
+
+images:
+  base_image:
+    name: quay.io/fedora/fedora:latest
+
+dependencies:
+  ansible_core:
+    package_pip: ansible-core
+  ansible_runner:
+    package_pip: ansible-runner
+  system:
+  - openssh-clients
+  - sshpass
+  galaxy:
+    collections:
+    - name: community.postgresql
+EOF
+
+
+Probably that build will fail.
+
+I used the following Docker file in the directory below:
+
+.
+├── context
+│   ├── Dockerfile
+│   └── _build
+│       ├── bindep.txt
+│       ├── requirements.yml
+│       └── scripts
+│           ├── assemble
+│           ├── check_ansible
+│           ├── check_galaxy
+│           ├── entrypoint
+│           ├── install-from-bindep
+│           ├── introspect.py
+│           └── pip_install
+└── execution-environment.yml
+
+
+cat <<EOF> Dockerfile
+ARG EE_BASE_IMAGE="quay.io/fedora/fedora:latest"
+ARG PYCMD="/usr/bin/python3"
+ARG PKGMGR_PRESERVE_CACHE=""
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS=""
+ARG ANSIBLE_GALAXY_CLI_ROLE_OPTS=""
+ARG ANSIBLE_INSTALL_REFS="ansible-core ansible-runner"
+ARG PKGMGR="/usr/bin/dnf"
+
+# Base build stage
+FROM $EE_BASE_IMAGE AS base
+USER root
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ARG EE_BASE_IMAGE
+ARG PYCMD
+ARG PKGMGR_PRESERVE_CACHE
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS
+ARG ANSIBLE_GALAXY_CLI_ROLE_OPTS
+ARG ANSIBLE_INSTALL_REFS
+ARG PKGMGR
+
+COPY _build/scripts/ /output/scripts/
+COPY _build/scripts/entrypoint /opt/builder/bin/entrypoint
+RUN dnf install -y python3 python3-pip && dnf clean all
+RUN python3 --version
+RUN /output/scripts/pip_install $PYCMD
+RUN $PYCMD -m pip install --no-cache-dir $ANSIBLE_INSTALL_REFS
+
+# Galaxy build stage
+FROM base AS galaxy
+ARG EE_BASE_IMAGE
+ARG PYCMD
+ARG PKGMGR_PRESERVE_CACHE
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS
+ARG ANSIBLE_GALAXY_CLI_ROLE_OPTS
+ARG ANSIBLE_INSTALL_REFS
+ARG PKGMGR
+
+RUN /output/scripts/check_galaxy
+COPY _build /build
+WORKDIR /build
+
+RUN mkdir -p /usr/share/ansible
+RUN ansible-galaxy role install $ANSIBLE_GALAXY_CLI_ROLE_OPTS -r requirements.yml --roles-path "/usr/share/ansible/roles"
+RUN ANSIBLE_GALAXY_DISABLE_GPG_VERIFY=1 ansible-galaxy collection install $ANSIBLE_GALAXY_CLI_COLLECTION_OPTS -r requirements.yml --collections-path "/usr/share/ansible/collections"
+
+# Builder build stage
+FROM base AS builder
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+WORKDIR /build
+ARG EE_BASE_IMAGE
+ARG PYCMD
+ARG PKGMGR_PRESERVE_CACHE
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS
+ARG ANSIBLE_GALAXY_CLI_ROLE_OPTS
+ARG ANSIBLE_INSTALL_REFS
+ARG PKGMGR
+
+RUN $PYCMD -m pip install --no-cache-dir bindep pyyaml packaging
+
+COPY --from=galaxy /usr/share/ansible /usr/share/ansible
+
+COPY _build/bindep.txt bindep.txt
+RUN $PYCMD /output/scripts/introspect.py introspect --user-bindep=bindep.txt --write-bindep=/tmp/src/bindep.txt --write-pip=/tmp/src/requirements.txt
+RUN /output/scripts/assemble
+
+# Final build stage
+FROM base AS final
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ARG EE_BASE_IMAGE
+ARG PYCMD
+ARG PKGMGR_PRESERVE_CACHE
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS
+ARG ANSIBLE_GALAXY_CLI_ROLE_OPTS
+ARG ANSIBLE_INSTALL_REFS
+ARG PKGMGR
+
+RUN /output/scripts/check_ansible $PYCMD
+
+COPY --from=galaxy /usr/share/ansible /usr/share/ansible
+
+COPY --from=builder /output/ /output/
+RUN /output/scripts/install-from-bindep && rm -rf /output/wheels
+RUN chmod ug+rw /etc/passwd
+RUN mkdir -p /runner && chgrp 0 /runner && chmod -R ug+rwx /runner
+WORKDIR /runner
+RUN $PYCMD -m pip install --no-cache-dir 'dumb-init==1.2.5'
+RUN rm -rf /output
+LABEL ansible-execution-environment=true
+USER 1000
+ENTRYPOINT ["/opt/builder/bin/entrypoint", "dumb-init"]
+CMD ["bash"]
+EOF
+
+
+then run:
+docker build -f context/Dockerfile -t postgresql_ee context
+
+docker images
+REPOSITORY                       TAG            IMAGE ID       CREATED         SIZE
+postgresql_ee                    latest         6fdbcfdd1123   3 minutes ago   302MB
+
+
+Inspect with ansible-navigator
+
+
+- Gather facts about localhost 
+ansible-navigator run test_localhost.yml --execution-environment-image postgresql_ee --mode stdout --pull-policy missing --container-options='--user=0'
+
+- Gather facts about remote
+ansible-navigator run test_remote.yml -i inventory/inventory.yaml --execution-environment-image postgresql_ee:latest --mode stdout --pull-policy missing --enable-prompts --container-options='--user=0'
+
+To get thise to work:
+
+1) the ssh key ~/.ssh/id_ed25519.pub need to be on the .ssh/authorized_keys on each box
+2) the ssh key ~/.ssh/id_ed25519 needs to be added to the agent - ssh-add ~/.ssh/id_ed25519
+   then check with ssh-add -l
+3) better not to have a passphrase associated with the key - so when creating dont bother to add a passphrase
+4) now run:
+ansible-navigator run test_remote.yml -i inventory/inventory.yaml --execution-environment-image postgresql_ee:latest --mode stdout --pull-policy missing --enable-prompts --container-options='--user=0'
+5) Note that on the macbook arm64 the .ssh/ folder is not being pickup up in the ansible inventory file so I have to copy the private locally.
+
+ 
+The userId on the managed hosts for root is 0, so we need to add --container-options='--user=0'
+"uptime_seconds": 46005,
+"user_dir": "/root",
+"user_gecos": "root",
+"user_gid": 0,
+"user_id": "root",
+"user_shell": "/bin/bash",
+"user_uid": 0,       
+
+
+
+- Community EE bas image
+
+ansible-navigator collections --execution-environment-image ghcr.io/ansible-community/community-ee-base:latest
+
+ansible-navigator run test_remote.yml -i inventory/inventory.yaml --execution-environment-image ghcr.io/ansible-community/community-ee-base --pull-policy missing --enable-prompts --container-options='--user=root' --mode stdout
+
+
+2. Ansible Playbook - macbook arm64 
+
+VMware Fusion (for Intel-based and Apple silicon Macs)
+https://support.broadcom.com/group/ecx/productfiles?subFamily=VMware%20Fusion&displayGroup=VMware%20Fusion%2013&release=13.6.1&os=&servicePk=524469&language=EN
+
+Should then use the following to run on arm64 Rosetta 2.
+
+
+2.1 Install VMs
+
+Rocky 9.5 * arm64
+https://rockylinux.org/download
+
+Rocky-9.5-aarch64-boot.iso
+
+2.2  Create the ssh keys on each remote host
+ssh $1 -t 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N ""'
+
+2.3 Add the public key to the authorized_keys on each remote host
+cat ~/.ssh/id_rsa.pub | ssh $1  'cat >> ~/.ssh/authorized_keys'
+
+2.4 Check the host file is correct as we will need to use this in the playbook
+cat hosts.yaml
+hostname:
+  - 172.16.5.135 broker01 jenkins
+  - 172.16.5.136 broker02 jenkins-node
+  - 172.16.5.137 broker03
+  - 172.16.5.138 broker04
+  - 172.16.5.139 broker05
+
+2.5 sudo access
+Run as root
+usermod -aG wheel nmaharaj
+exportUSER=nmaharaj
+echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+
+
+
+3 All together as a script on the remote host:
+
+cat <<EOF> setup.sh
+#!/bin/bash
+
+# Create the ssh keys on each remote host
+ssh $1 -t 'ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N ""'
+
+# sudo access
+# Run as root
+usermod -aG wheel nmaharaj
+exportUSER=nmaharaj
+echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+EOF
+
+chmod +x setup.sh && ./setup.sh
+
+
+4 Install jenkins on the remote host broker01
+ansible-playbook playbook.yaml -i inventory/inventory.yaml -l jenkins
+
+5 Prepare jenkins agent node
+ansible-playbook playbook.yaml -i inventory/inventory.yaml -l jenkins-node
+
+On host jenkins-node ( broker02 )
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+On Jenkins GUI ( broker01)
+Add the private key to the Dashboard --> Manage Jenkins --> Credentials --> Add Credentials
+
+On Jenkins ( broker01 )  
+ssh-copy-id broker02
+
+Needs some more practice here to get this working.
+
+6 
+

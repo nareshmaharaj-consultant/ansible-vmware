@@ -1,0 +1,76 @@
+-- Jenkins --
+
+Install:
+https://www.jenkins.io/doc/book/installing/linux/#fedora
+
+- SSH Key Jenkins Agent
+When creating the jenkins agent node create the private key as below.
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N ""
+Add the private key to the Dashboard --> Manage Jenkins --> Credentials --> Add Credentials
+Then copy public key to: ~/.ssh/authorized_keys on the agent machine. ( yes the same macbine where the agent is running)
+
+
+- Agent Machine
+
+sudo dnf install sshpass
+ssh-copy-id -f vagrant@broker01 / 02 /03 ...
+ssh-add ~/.ssh/id_rsa
+
+- Build Docker image:
+docker build -f build_docker/context/Dockerfile -t broker_ansible_ee build_docker/context/
+
+
+- Test Deploy
+ansible-navigator run playbook.yaml -i inventory/inventory.yaml --execution-environment-image broker_ansible_ee --pull-policy missing  --enable-prompts --container-options='--user=root' --mode stdout --extra-vars "ansible_ssh_private_key_file=/home/vagrant/.ssh/id_rsa"
+
+or running as sudo
+sudo su - vagrant -c 'ansible-navigator run /home/vagrant/jenkins/workspace/pipeline_ansible-libs-centos9/playbook.yaml -i /home/vagrant/jenkins/workspace/pipeline_ansible-libs-centos9/inventory/inventory.yaml --execution-environment-image broker_ansible_ee --pull-policy never  --enable-prompts --container-options="--user=root" --mode stdout -l deploy_machines -t hostname --extra-vars=ansible_ssh_private_key_file=/home/vagrant/.ssh/id_rsa'
+
+- Pipeline:
+
+pipeline {
+    agent {
+    node {
+            label 'task-handler-01'
+        }
+    }
+
+    stages {
+        stage('checkout') {
+            steps {
+                git branch: 'main', 
+                credentialsId: 'ca8ddc20-0c05-42c5-b1ac-c72a01d25a23', 
+                url: 'https://github.com/nareshmaharaj-consultant/ansible-demo.git'
+            }
+        }
+        stage('Lint playbook') {
+            steps {
+                sh '''
+                    ansible-galaxy collection install ansible.posix --ignore-certs
+                    ansible-lint playbook.yaml
+                '''
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh '''
+                    sudo docker build -f build_docker/context/Dockerfile \
+                      -t broker_ansible_ee build_docker/context/
+                    '''
+                }
+            }
+        }
+    }
+}
+
+
+
+
+sudo chmod 666 /var/run/docker.sock
+
+export ANSIBLE_LOG_PATH=./ansible.log
+
+
+
+

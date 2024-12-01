@@ -1,0 +1,6 @@
+hostname:
+  - 192.168.56.151 asd01 broker01
+  - 192.168.56.152 asd02 broker02
+  - 192.168.56.153 asd03 broker03
+  - 192.168.56.154 asd04 broker04 jenkins
+  - 192.168.56.155 asd05 broker05 jenkins-node
