@@ -35,14 +35,14 @@
   hosts: deploy_machines
   become: true
   tasks:
-    - name: Get Jenkins Node Public Key
+    - name: Get Jenkins Agent Public Key
       ansible.builtin.set_fact:
-        jenkins_node_key: "{{ lookup('file', 'jenkins_node_pub_key/id_rsa.pub', fail_on_missing=true) }}"
+        jenkins_agent_key: "{{ lookup('file', 'jenkins_agent_pub_key/id_rsa.pub', fail_on_missing=true) }}"
 
-    - name: Add Jenkins Node Key to Authorized Keys
+    - name: Add Jenkins Agent Key to Authorized Keys
       ansible.posix.authorized_key:
         user: "{{ user }}"
-        key: "{{ jenkins_node_key }}"
+        key: "{{ jenkins_agent_key }}"
         state: present
 
     - name: Install Libraries
@@ -490,7 +490,7 @@
     - name: Storing ssh public key for jenkins agent.
       ansible.builtin.fetch:
         src: "/home/{{ user }}/.ssh/id_rsa.pub"
-        dest: jenkins_node_pub_key/
+        dest: jenkins_agent_pub_key/
         flat: true
       tags: get_jenkins_node_pub
       become: true
