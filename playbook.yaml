@@ -64,12 +64,17 @@
       tags: java-links
 
     # -- Install Elastic Search -- #
-    --name: Install Elastic Search
-    ansible.builtin.template:
-      src: templates/elasticsearch-config.j2
-      dest: /tmp/elasticsearch-setup.sh
-      mode: 0755
-    tag: install-elastic
+    - name: Prepare Install Script for Elastic Search
+      ansible.builtin.template:
+        src: templates/elasticsearch-config.j2
+        dest: /tmp/elasticsearch-setup.sh
+        mode: "0755"
+      become: true
+
+    - name: Install Elastic Search
+      ansible.builtin.command: /tmp/elasticsearch-setup.sh
+      changed_when: false
+      become: true
 
     # -- Install Scala -- #
     - name: Download Scala
