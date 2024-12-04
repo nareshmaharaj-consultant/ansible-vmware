@@ -78,7 +78,7 @@
       become: true
 
     # -- Install Scala -- #
-     - name: Get Scala Info
+    - name: Get Scala Info
       ansible.builtin.shell:
         cmd: "set -o pipefail;[ -f {{ scala_binary }} ] && echo Scala || echo 0"
       register: scala_present
