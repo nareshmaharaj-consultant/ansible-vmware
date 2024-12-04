@@ -86,7 +86,7 @@
       become: true
       become_user: "{{ user }}"
       tags: scala_i
-      
+
     - name: Download Scala
       ansible.builtin.get_url:
         url: "{{ scala_download_url_arm }}"
@@ -101,7 +101,7 @@
       ansible.builtin.file:
         path: "{{ scala_install_loc }}"
         state: absent
-      tags: scala   
+      tags: scala
 
     - name: Download Scala
       ansible.builtin.get_url:
