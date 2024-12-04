@@ -63,7 +63,25 @@
         - { src: javac, dest: javac }
       tags: java-links
 
+    # -- Install Elastic Search -- #
+    --name: Install Elastic Search
+    ansible.builtin.template:
+      src: templates/elasticsearch-config.j2
+      dest: /tmp/elasticsearch-setup.sh
+      mode: 0755
+    tag: install-elastic
+
     # -- Install Scala -- #
+    - name: Download Scala
+      ansible.builtin.get_url:
+        url: "{{ scala_download_url_arm }}"
+        dest: "{{ scala_install_loc }}"
+        mode: '0766'
+      when: scala_present.stdout.find('Scala') == -1
+      become: true
+      become_user: "{{ user }}"
+      tags: scala_download
+
     - name: Remove Scala Previous Install
       ansible.builtin.file:
         path: "{{ scala_install_loc }}"
