@@ -89,7 +89,7 @@ all:
         elastic_sha_url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.16.1-linux-x86_64.tar.gz.sha512
         elastic_bin: elasticsearch-8.16.1-linux-x86_64.tar.gz
         elastic_sha_file: elasticsearch-8.16.1-linux-x86_64.tar.gz.sha512
-        eleastic_dir: elasticsearch-8.16.1
+        elastic_dir: elasticsearch-8.16.1
         elastic_home_var: ES_HOME
         java_dir_loc: /etc/alternatives/java_sdk_11_openjdk/bin/
         java_dir_link_to: /usr/bin/
