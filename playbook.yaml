@@ -78,6 +78,15 @@
       become: true
 
     # -- Install Scala -- #
+     - name: Get Scala Info
+      ansible.builtin.shell:
+        cmd: "set -o pipefail;[ -f {{ scala_binary }} ] && echo Scala || echo 0"
+      register: scala_present
+      changed_when: scala_present.stdout == ""
+      become: true
+      become_user: "{{ user }}"
+      tags: scala_i
+      
     - name: Download Scala
       ansible.builtin.get_url:
         url: "{{ scala_download_url_arm }}"
@@ -92,16 +101,7 @@
       ansible.builtin.file:
         path: "{{ scala_install_loc }}"
         state: absent
-      tags: scala
-
-    - name: Get Scala Info
-      ansible.builtin.shell:
-        cmd: "set -o pipefail;[ -f {{ scala_binary }} ] && echo Scala || echo 0"
-      register: scala_present
-      changed_when: scala_present.stdout == ""
-      become: true
-      become_user: "{{ user }}"
-      tags: scala_i
+      tags: scala   
 
     - name: Download Scala
       ansible.builtin.get_url:
