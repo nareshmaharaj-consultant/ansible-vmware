@@ -418,7 +418,7 @@
 
 # --  JENKINS Node: Install Libraries for CI/CD -- #
 - name: Install Jenkin NODE Libaries
-  hosts: jenkins-node
+  hosts: jenkins_node
   become: true
   tasks:
     # -- Add repo - check with yum repolist

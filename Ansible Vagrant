@@ -364,5 +364,7 @@ ssh-copy-id broker02
 
 Needs some more practice here to get this working.
 
-6 
-
+6 On Jenkins agent
+ssh-copy-id broker03
+ssh-copy-id broker04
+ssh-copy-id broker05

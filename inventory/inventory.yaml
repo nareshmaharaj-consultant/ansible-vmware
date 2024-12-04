@@ -63,6 +63,7 @@ all:
           - pycairo
           - bottle
           - SQLAlchemy
+          - elasticsearch==8.*
         firewall_ports:
           - 6443/tcp
           - 10250/tcp
@@ -120,7 +121,7 @@ all:
           - ansible-lint
         firewall_ports:
           - 8080/tcp
-    jenkins-node:
+    jenkins_node:
       hosts:
         broker02:
           ansible_host: broker02
@@ -149,4 +150,3 @@ all:
         python_pip_installs_req:
           - ansible-lint
         user: nmaharaj
-# End
