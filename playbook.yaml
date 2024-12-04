@@ -72,7 +72,8 @@
       become: true
 
     - name: Install Elastic Search
-      ansible.builtin.shell: /tmp/elasticsearch-setup.sh
+      ansible.builtin.command:
+        cmd: sh /tmp/elasticsearch-setup.sh
       changed_when: false
       become: true
 
