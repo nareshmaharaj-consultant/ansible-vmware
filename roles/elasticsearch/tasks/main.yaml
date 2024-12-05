@@ -1,7 +1,7 @@
 # -- Install Elastic Search -- #
 - name: Get Elastic Search Info
   ansible.builtin.shell:
-    cmd: "set -o pipefail;[ -f  /opt/{{ elastic_dir }}/bin/elasticsearch ] && echo Elastic || echo 0"
+    cmd: "set -o pipefail;[ -f  /opt/{{ elasticsearch_dir }}/bin/elasticsearch ] && echo Elastic || echo 0"
   register: es_present
   changed_when: es_present.stdout == ""
   become: true

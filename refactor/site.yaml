@@ -1,3 +1,0 @@
-- import_playbook: jenkins.yaml
-- import_playbook: jenkins_agents.yaml
-- import_playbook: deploy_machines.yaml

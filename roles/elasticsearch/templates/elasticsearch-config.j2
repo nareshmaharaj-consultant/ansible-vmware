@@ -1,0 +1,14 @@
+# elasticsearch-config.j2
+# Download Elasticsearch binary
+curl -o {{ elasticsearch_bin }} {{ elasticsearch_bin_url }}
+
+# Download and verify the SHA checksum
+curl -o {{ elasticsearch_sha_file }} {{ elasticsearch_sha_url }}
+sha512sum -c {{ elasticsearch_sha_file }}
+
+# Extract Elasticsearch
+tar -xzf {{ elasticsearch_bin }}
+mv {{ elasticsearch_dir }} /opt/
+
+# Set Elasticsearch home environment variable
+export {{ elasticsearch_home_var }}=/opt/{{ elasticsearch_dir }}

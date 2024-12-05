@@ -59,9 +59,9 @@
   tags: sshd-2
 
 - name: Be sure sshd is running and enabled
-  service:
+  ansible.builtin.service:
     name: sshd
     state: started
-    enabled: yes
+    enabled: true
   become: true
   tags: sshd-2

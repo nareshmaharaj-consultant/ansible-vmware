@@ -1,0 +1,8 @@
+- name: Import Jenkins Playbook
+  ansible.builtin.import_playbook: jenkins.yaml
+
+- name: Import Jenkins Agents Playbook
+  ansible.builtin.import_playbook: jenkins_agents.yaml
+
+- name: Import Deploy Machines Playbook
+  ansible.builtin.import_playbook: deploy_machines.yaml

@@ -1,0 +1,5 @@
+- name: Jenkins Agent Define Roles
+  hosts: jenkins_agents
+  roles:
+   - common
+   - jenkins_agents

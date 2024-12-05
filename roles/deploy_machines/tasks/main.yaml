@@ -1,6 +1,10 @@
 - name: Get Jenkins Agent Public Key
   ansible.builtin.set_fact:
     jenkins_agent_key: "{{ lookup('file', 'jenkins_agent_pub_key/id_rsa.pub', fail_on_missing=true) }}"
+  tags:
+    - agent_key
+    - jenkins_agent_key
+    - jak
 
 - name: Add Jenkins Agent Key to Authorized Keys
   ansible.posix.authorized_key:
