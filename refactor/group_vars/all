@@ -1,0 +1,12 @@
+libs:
+  - nc
+  - wget
+  - git
+pip_min_dep: packaging
+user: nmaharaj
+hostnames_env:
+  - 172.16.5.135 broker01 jenkins
+  - 172.16.5.136 broker02 jenkins-node
+  - 172.16.5.137 broker03
+  - 172.16.5.138 broker04
+  - 172.16.5.139 broker05

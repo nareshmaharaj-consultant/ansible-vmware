@@ -1,0 +1,5 @@
+- hosts: deploy_machines
+  roles:
+    - common
+    - deploy_machines
+    - elasticsearch

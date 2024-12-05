@@ -1,0 +1,243 @@
+- name: Get Jenkins Agent Public Key
+  ansible.builtin.set_fact:
+    jenkins_agent_key: "{{ lookup('file', 'jenkins_agent_pub_key/id_rsa.pub', fail_on_missing=true) }}"
+
+- name: Add Jenkins Agent Key to Authorized Keys
+  ansible.posix.authorized_key:
+    user: "{{ user }}"
+    key: "{{ jenkins_agent_key }}"
+    state: present
+
+- name: Install Libraries
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ libs }}"
+  become: true
+  tags: libs
+
+# --  Create Soft links for Java executables -- #
+- name: Link Java Executables
+  ansible.builtin.file:
+    src: "{{ java_dir_loc }}{{ item.src }}"
+    dest: "{{ java_dir_link_to }}{{ item.dest }}"
+    state: link
+  loop:
+    - { src: java, dest: java }
+    - { src: javac, dest: javac }
+  tags: java-links
+
+# -- Install Scala -- #
+- name: Get Scala Info
+  ansible.builtin.shell:
+    cmd: "set -o pipefail;[ -f {{ scala_binary }} ] && echo Scala || echo 0"
+  register: scala_present
+  changed_when: scala_present.stdout == ""
+  become: true
+  become_user: "{{ user }}"
+  tags: scala_i
+
+- name: Download Scala
+  ansible.builtin.get_url:
+    url: "{{ scala_download_url_arm }}"
+    dest: "{{ scala_install_loc }}"
+    mode: '0766'
+  when: scala_present.stdout.find('Scala') == -1
+  become: true
+  become_user: "{{ user }}"
+  tags: scala_download
+
+- name: Remove Scala Previous Install
+  ansible.builtin.file:
+    path: "{{ scala_install_loc }}"
+    state: absent
+  tags: scala
+
+- name: Download Scala
+  ansible.builtin.get_url:
+    url: "{{ scala_download_url_arm }}"
+    dest: "{{ scala_install_loc }}"
+    mode: '0766'
+  when: scala_present.stdout.find('Scala') == -1
+  become: true
+  become_user: "{{ user }}"
+  tags: scala_download
+
+- name: Gunzip extract
+  ansible.builtin.shell:
+    cmd: gunzip -cf {{ scala_install_loc }} > cs;ls -1 cs
+  register: result
+  changed_when: result.rc == 0
+  when: scala_present.stdout.find('Scala') == -1
+  become: true
+  become_user: "{{ user }}"
+  tags: scala_extract
+
+- name: Install Scala
+  ansible.builtin.shell: chmod +x cs && ./cs setup -y
+  when: scala_present.stdout.find('Scala') == -1
+  register: result
+  changed_when: result.rc == 0
+  become: true
+  become_user: "{{ user }}"
+  tags: scala_install
+
+- name: Remove Scala Install
+  ansible.builtin.file:
+    path: "{{ scala_install_loc }}"
+    state: absent
+  tags: scala_clean
+
+# Install Python
+- name: Group Install Development Tools
+  ansible.builtin.dnf:
+    name: "@Development Tools"
+    state: present
+  become: true
+  tags:
+    - py-install-d
+
+- name: Install Python Dependencies
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+  loop: "{{ python_libs }}"
+  become: true
+  tags:
+    - py-install-d
+
+- name: Get Python Info
+  ansible.builtin.shell:
+    cmd: "set -o pipefail;[ -f {{ python_exec_path }} ] && echo `{{ python_exec_path }} --version` || echo 0"
+  register: python_present
+  changed_when: python_present.stdout.find(python_version) == -1
+  tags:
+    - py-install-i
+
+- name: Get Python Install URL
+  ansible.builtin.get_url:
+    url: "{{ python_bin_url }}"
+    dest: "{{ python_download_to_dir }}"
+    mode: "0766"
+  when: python_present.stdout.find(python_version) == -1
+  become: true
+  become_user: "{{ user }}"
+  tags:
+    - py-install-u
+
+- name: Extract Python URL
+  ansible.builtin.unarchive:
+    src: "{{ python_download_to_dir }}/{{ python_bin_name }}.tgz"
+    dest: "{{ python_download_to_dir }}"
+    remote_src: true
+  when: python_present.stdout.find(python_version) == -1
+  become: true
+  become_user: "{{ user }}"
+  tags:
+    - py-install-x
+
+- name: Configure Python
+  ansible.builtin.command:
+    chdir: "{{ python_unpacked_dir }}"
+    cmd: ./configure --enable-optimizations
+  when: python_present.stdout.find(python_version) == -1
+  changed_when: false
+  become: true
+  become_user: "{{ user }}"
+  tags:
+    - py-install-c
+
+- name: Make Python
+  ansible.builtin.command:
+    cmd: make -j 4
+    chdir: "{{ python_unpacked_dir }}"
+  when: python_present.stdout.find(python_version) == -1
+  changed_when: false
+  become: true
+  become_user: "{{ user }}"
+  tags:
+    - py-install-m
+
+- name: Install Python
+  ansible.builtin.command:
+    cmd: sudo make altinstall
+    chdir: "{{ python_unpacked_dir }}"
+  when: python_present.stdout.find(python_version) == -1
+  register: result
+  changed_when: result.rc == 0
+  tags:
+    - py-install-a
+
+# -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+- name: Python pip dependency
+  ansible.builtin.shell: |
+    set -o pipefail
+    pip install '{{ pip_min_dep }}' > /dev/null 2>&1
+    pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+  register: pip_usage_dep_req
+  changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+  become: true
+  tags: pip_dep
+
+# -- Python Packages Installed using pip -- #
+- name: Python Packages Required Using pip
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ python_pip_installs_req | default([]) }}"
+  when: python_pip_installs_req | length > 0
+  tags: pip_lib_installs
+
+# -- Firewall Settings -- #
+- name: Gather firewall info before changes
+  ansible.posix.firewalld_info:
+    active_zones: true
+  register: before_fw_chg
+  become: true
+  tags: firewall_before
+
+- name: Add Firewall Port
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop: "{{ firewall_ports | default([]) }}"
+  when: firewall_ports | length > 0
+  become: true
+  tags: firewall_add
+
+- name: Gather firewall info after changes
+  ansible.posix.firewalld_info:
+    active_zones: true
+  register: after_fw_chg
+  become: true
+  tags: firewall_after
+
+- name: Compare Firewall Open Ports Before & After Results
+  ansible.builtin.set_fact:
+    all_ports_open: "{{ (after_fw_chg.firewalld_info.zones.public.ports | difference(before_fw_chg.firewalld_info.zones.public.ports)) }}"
+  tags: firewall_i
+
+- name: Restart network service for firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: restarted
+  when: all_ports_open | length > 0
+  tags: firewall_r
+
+# -- Disable Swap for DBs -- #
+- name: Check Swapon devices
+  ansible.builtin.shell: |
+    set -o pipefail
+    cat /proc/swaps | egrep -v ^File || true | wc -l
+  register: swap_enabled
+  changed_when: swap_enabled.stdout.find("0") == -1
+  tags: swap
+
+- name: Disable Swap
+  ansible.builtin.shell:
+    cmd: set -o pipefail;swapoff -a;sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab;cat /proc/meminfo | grep Swap | grep Total | awk '{print $2}'
+  register: swap_size
+  changed_when: swap_size.stdout.find('0') == -1
+  when: swap_enabled.stdout.find('0') == -1
+  tags: swap

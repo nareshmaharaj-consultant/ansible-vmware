@@ -4,7 +4,7 @@ all:
       - any1
       - any2
   children:
-    deploy_machines:
+    deploy_machines: # `group_vars/deploy_machines.yaml`
       hosts:
         broker03:
           ansible_host: broker03
@@ -98,7 +98,7 @@ all:
         scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
         scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
         user: nmaharaj
-    jenkins:
+    jenkins: # `group_vars/jenkins.yaml`
       hosts:
         broker01:
           ansible_host: broker01
@@ -127,7 +127,7 @@ all:
           - ansible-lint
         firewall_ports:
           - 8080/tcp
-    jenkins_node:
+    jenkins_node: # `group_vars/jenkins_node.yaml`
       hosts:
         broker02:
           ansible_host: broker02

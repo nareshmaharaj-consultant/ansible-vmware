@@ -1,0 +1,18 @@
+libs:
+  - fontconfig
+  - java-17-openjdk
+  - jenkins
+  - nc
+  - wget
+  - git
+  - python3-devel
+jenkins_ssl_verify: false
+jenkins_gpg_key_url: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+jenkins_repo_url: "https://pkg.jenkins.io/redhat-stable/jenkins.repo"
+jenkins_repo_dest: /etc/yum.repos.d/jenkins.repo
+jenkins_pwd_show: false # once changed on gui front end pwd file removed
+pip_min_dep: packaging
+python_pip_installs_req:
+  - ansible-lint
+firewall_ports:
+  - 8080/tcp

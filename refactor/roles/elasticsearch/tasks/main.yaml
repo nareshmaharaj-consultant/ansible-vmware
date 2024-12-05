@@ -1,0 +1,33 @@
+# -- Install Elastic Search -- #
+- name: Get Elastic Search Info
+  ansible.builtin.shell:
+    cmd: "set -o pipefail;[ -f  /opt/{{ elastic_dir }}/bin/elasticsearch ] && echo Elastic || echo 0"
+  register: es_present
+  changed_when: es_present.stdout == ""
+  become: true
+  become_user: "{{ user }}"
+  tags: es_i
+
+- name: Prepare Install Script for Elastic Search
+  ansible.builtin.template:
+    src: templates/elasticsearch-config.j2
+    dest: /tmp/elasticsearch-setup.sh
+    mode: "0755"
+  when: es_present.stdout.find('Elastic') == -1
+  become: true
+  tags: es
+
+- name: Install Elastic Search
+  ansible.builtin.command:
+    cmd: sh /tmp/elasticsearch-setup.sh
+  changed_when: false
+  when: es_present.stdout.find('Elastic') == -1
+  become: true
+  tags: es
+
+- name: Export Variable 'ES_HOME' for Elastic Search
+  ansible.builtin.lineinfile:
+    path: /home/nmaharaj/.bash_profile
+    line: 'export ES_HOME=/opt/elasticsearch-8.16.1'
+    state: present
+  tags: es

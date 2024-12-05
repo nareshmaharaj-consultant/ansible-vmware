@@ -1,0 +1,86 @@
+# -- Add repo - check with yum repolist
+- name: Add Docker Repo
+  ansible.builtin.yum_repository:
+    name: docker-ce-stable
+    description: Docker CE Repo
+    baseurl: https://download.docker.com/linux/centos/docker-ce.repo
+  tags: docker-repo
+
+- name: Install Jenkin Dependencies
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ libs }}"
+  become: true
+  tags: libs
+
+# -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+- name: Python pip dependency
+  ansible.builtin.shell:
+    cmd: set -o pipefail;pip install '{{ pip_min_dep }}' > /dev/null 2>&1;pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+  register: pip_usage_dep_req
+  changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+  become: true
+  tags: pip_dep
+
+# -- Python Packages Installed using pip -- #
+- name: Python Packages Required Using pip
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ python_pip_installs_req | default([]) }}"
+  when: python_pip_installs_req | length > 0
+  tags: pip_lib_installs
+
+# -- Install Docker libs
+- name: Install Docker Libs
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ docker_libs }}"
+  become: true
+  tags: docker
+
+- name: Ensure group "docker" exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+  tags: docker-group
+
+- name: Add the user to docker group
+  ansible.builtin.user:
+    name: "{{ user }}"
+    groups: docker
+    append: true
+  tags: docker-group
+
+- name: Start Docker Service
+  ansible.builtin.systemd_service:
+    state: started
+    daemon_reload: true
+    enabled: true
+    name: docker
+  become: true
+  tags: docker
+
+- name: Change docker.sock Permissions
+  ansible.builtin.file:
+    path: /var/run/docker.sock
+    mode: "0660"
+  tags: docker_perm
+
+- name: Storing ssh public key for jenkins agent.
+  ansible.builtin.fetch:
+    src: "/home/{{ user }}/.ssh/id_rsa.pub"
+    dest: jenkins_agent_pub_key/
+    flat: true
+  tags: get_jenkins_node_pub
+  become: true
+
+- name: Mkdir for jenkins jobs
+  ansible.builtin.file:
+    path: /home/{{ user }}/jenkins_jobs
+    state: directory
+    mode: "0755"
+  tags: mkdir_jenkins_jobs
+  become: true

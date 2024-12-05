@@ -1,0 +1,67 @@
+- name: "Update Hosts file /etc/hosts"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    state: present
+    line: "{{ item }}"
+  loop: "{{ hostnames_env }}"
+  tags: host_name
+  become: true
+
+- name: Get hostname of current host
+  ansible.builtin.shell: echo $HOSTNAME
+  register: result_hostname
+  changed_when: false
+  tags: host_name
+
+- name: "Insert hostname to /etc/hosts"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "127.0.0.1 {{ result_hostname.stdout }}"
+  become: true
+  tags: host_name
+
+- name: Install Libraries
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ libs }}"
+  become: true
+  tags: libs
+
+# -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+- name: Python pip dependency
+  ansible.builtin.shell: |
+    set -o pipefail
+    pip install '{{ pip_min_dep }}' > /dev/null 2>&1
+    pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+  register: pip_usage_dep_req
+  changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+  become: true
+  tags: pip_dep
+
+- name: Get TCP Keep Alive Settings
+  ansible.builtin.shell: set -o pipefail;cat /etc/ssh/sshd_config | grep ^TCPKeepAlive | awk {'print $2'} || true
+  register: tcp_keep_alive
+  changed_when: tcp_keep_alive.stdout.find('yes') == -1
+  become: true
+  tags: sshd-2
+
+- name: Set Keep Alive SSH
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?TCPKeepAlive'
+    line: 'TCPKeepAlive yes'
+    state: present
+  when: tcp_keep_alive.stdout.find('yes') == -1
+  notify:
+    - Restart SSHD Service
+  become: true
+  tags: sshd-2
+
+- name: Be sure sshd is running and enabled
+  service:
+    name: sshd
+    state: started
+    enabled: yes
+  become: true
+  tags: sshd-2

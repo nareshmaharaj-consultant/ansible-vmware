@@ -1,0 +1,126 @@
+- name: Group Install Development Tools
+  ansible.builtin.dnf:
+    name: "@Development Tools"
+    state: present
+  become: true
+  tags:
+    - py-install-d
+
+- name: Import Jenkins GPG Key URL
+  ansible.builtin.rpm_key:
+    state: present
+    key: "{{ jenkins_gpg_key_url }}"
+  become: true
+  tags: jenkins-key
+
+- name: Add Jenkins repository
+  ansible.builtin.get_url:
+    url: "{{ jenkins_repo_url }}"
+    dest: "{{ jenkins_repo_dest }}"
+    mode: "0644"
+  tags: jenkins-repo
+  become: true
+
+- name: "Ignore cert check"
+  ansible.builtin.lineinfile:
+    path: /etc/yum.repos.d/jenkins.repo
+    state: present
+    line: "sslverify={{ jenkins_ssl_verify }}"
+  tags: libs
+
+- name: Install Jenkin Dependencies
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ libs }}"
+  become: true
+  tags: libs
+
+- name: Restart service jenkins
+  ansible.builtin.systemd_service:
+    state: started
+    daemon_reload: true
+    enabled: true
+    name: jenkins
+  become: true
+  tags: jenkins-service
+
+- name: Get Firewall Info for Jenkins
+  ansible.builtin.shell:
+    cmd: "set -o pipefail;netstat -tuln | awk '{print $4}' | grep $8080 | sed 's/:*//'"
+  register: jenkins_firewall_service_up
+  changed_when: jenkins_firewall_service_up.stdout.find("8080") == -1
+  tags: firewall
+
+- name: Firewall Port Exception for Jenkins
+  ansible.builtin.shell: |
+    # Define the port for Jenkins
+    YOURPORT=8080
+
+    # Define the "permanent" option for firewall commands
+    PERM="--permanent"
+
+    # Define a variable for Jenkins service configuration
+    SERV="$PERM --service=jenkins"
+
+    # Step 1: Create a new service named "jenkins" in the firewall
+    firewall-cmd $PERM --new-service=jenkins
+
+    # Step 2: Set a short description for the Jenkins service
+    firewall-cmd $SERV --set-short="Jenkins ports"
+
+    # Step 3: Set a detailed description for the Jenkins service
+    firewall-cmd $SERV --set-description="Jenkins port exceptions"
+
+    # Step 4: Add the specified port (8080) for the Jenkins service
+    firewall-cmd $SERV --add-port=$YOURPORT/tcp
+
+    # Step 5.1: Permanently add the Jenkins service to the firewall
+    sudo firewall-cmd --zone=public --add-service=jenkins --permanent
+
+    # Step 5.2: Permanently add the Jenkins port to the firewall
+    sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
+
+    # Step 6: Allow the HTTP service in the public zone permanently
+    firewall-cmd --zone=public --add-service=http --permanent
+
+    # Step 7: Reload the firewall to apply changes
+    firewall-cmd --reload
+  args:
+    executable: /usr/bin/bash
+  when: jenkins_firewall_service_up.stdout.find("8080") == -1
+  register: result
+  changed_when: result.rc == 0
+  tags: firewall
+
+
+- name: Jenkins UI Password
+  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_pwd
+  changed_when: jenkins_pwd.stdout.find("") == -1
+  when: jenkins_pwd_show
+  tags: jenkins-pwd
+
+- name: Print Jenkins Pwd
+  ansible.builtin.debug:
+    msg: "Jenkins Login pwd: {{ jenkins_pwd.stdout }}"
+  when: jenkins_pwd_show
+  tags: jenkins-pwd
+
+# -- Python ansible pip usage dependency - use ansible.builtin.pip after -- #
+- name: Python pip dependency
+  ansible.builtin.shell:
+    cmd: set -o pipefail;pip install '{{ pip_min_dep }}' > /dev/null 2>&1;pip list --disable-pip-version-check | grep '{{ pip_min_dep }}' | awk '{print $1}'
+  register: pip_usage_dep_req
+  changed_when: pip_usage_dep_req.stdout.find(pip_min_dep) == -1
+  become: true
+  tags: pip_dep
+
+# -- Python Packages Installed using pip -- #
+- name: Python Packages Required Using pip
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ python_pip_installs_req | default([]) }}"
+  when: python_pip_installs_req | length > 0
+  tags: pip_lib_installs

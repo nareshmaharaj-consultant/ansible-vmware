@@ -1,0 +1,56 @@
+libs:
+  - openssl-devel
+  - gcc
+  - maven
+  - bind-utils
+  - java-11-openjdk
+  - java-11-openjdk-devel
+  - cairo-devel
+  - pkg-config
+  - python3-devel
+  - python-firewall
+python_libs:
+  - openssl-devel
+  - bzip2-devel
+  - libffi-devel
+  - sqlite-devel
+#  - elasticsearch==8.*
+python_version: 3.12.1
+python_bin_url: https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz
+python_bin_name: Python-3.12.1
+python_exec_path: /usr/local/bin/python3.12
+pip_min_dep: packaging
+python_unpacked_dir: /tmp/Python-3.12.1/
+python_download_to_dir: /tmp/
+python_pip_installs_req:
+  - meson
+  - pycairo
+  - bottle
+  - SQLAlchemy
+firewall_ports:
+  - 6443/tcp
+  - 10250/tcp
+  - 3000/tcp
+  - 3001/tcp
+  - 3002/tcp
+  - 9145/tcp
+  - 8888/tcp
+  - 2181/tcp
+  - 27027/tcp
+  - 28027/tcp
+  - 29027/tcp
+  - 30027/tcp
+  - 31027/tcp
+  - 32027/tcp
+  - 33027/tcp
+  - 34027/tcp
+  - 2888/tcp
+  - 3888/tcp
+  - 9092/tcp
+  - 22/tcp
+java_dir_loc: /etc/alternatives/java_sdk_11_openjdk/bin/
+java_dir_link_to: /usr/bin/
+scala_install_loc: /home/nmaharaj/cs-aarch64-pc-linux.gz
+scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala
+scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
+scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
