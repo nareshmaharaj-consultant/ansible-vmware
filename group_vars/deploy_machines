@@ -3,8 +3,8 @@ libs:
   - gcc
   - maven
   - bind-utils
-  - java-11-openjdk
-  - java-11-openjdk-devel
+  - java-17-openjdk
+  - java-17-openjdk-devel
   - cairo-devel
   - pkg-config
   - python3-devel
@@ -48,7 +48,7 @@ firewall_ports:
   - 3888/tcp
   - 9092/tcp
   - 22/tcp
-java_dir_loc: /etc/alternatives/java_sdk_11_openjdk/bin/
+java_dir_loc: /etc/alternatives/java_sdk_17_openjdk/bin/
 java_dir_link_to: /usr/bin/
 scala_install_loc: /home/nmaharaj/cs-aarch64-pc-linux.gz
 scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala

@@ -3,4 +3,5 @@ elasticsearch_sha_url: https://artifacts.elastic.co/downloads/elasticsearch/elas
 elasticsearch_sha_file: elasticsearch-8.16.1-linux-aarch64.tar.gz.sha512
 elasticsearch_bin: elasticsearch-8.16.1-linux-aarch64.tar.gz
 elasticsearch_dir: elasticsearch-8.16.1
-elasticsearch_home_var: ES_HOME
+elasticsearch_home: ES_HOME
+elasticsearch_java_home: ES_JAVA_HOME

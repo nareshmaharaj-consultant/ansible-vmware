@@ -29,6 +29,7 @@
   loop:
     - { src: java, dest: java }
     - { src: javac, dest: javac }
+  become: true
   tags: java-links
 
 # -- Install Scala -- #

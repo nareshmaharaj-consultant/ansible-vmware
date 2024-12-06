@@ -12,7 +12,8 @@ if [[ "$sha512sum_output" == "OK" ]]; then
   mv {{ elasticsearch_dir }} /opt/
 
   # Set Elasticsearch home environment variable
-  export {{ elasticsearch_home_var }}=/opt/{{ elasticsearch_dir }}
+  export {{ elasticsearch_home }}=/opt/{{ elasticsearch_dir }}
+  export {{ elasticsearch_java_home }}=/usr
 else
   echo "Failed sha256sum checksum: {{ elasticsearch_bin }}"
   false
