@@ -1,5 +1,6 @@
-elasticsearch_bin_url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.16.1-linux-x86_64.tar.gz
-elasticsearch_sha_url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.16.1-linux-x86_64.tar.gz.sha512
-elasticsearch_bin: elasticsearch-8.16.1-linux-x86_64.tar.gz
+elasticsearch_bin_url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.16.1-linux-aarch64.tar.gz
+elasticsearch_sha_url: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.16.1-linux-aarch64.tar.gz.sha512
+elasticsearch_sha_file: elasticsearch-8.16.1-linux-aarch64.tar.gz.sha512
+elasticsearch_bin: elasticsearch-8.16.1-linux-aarch64.tar.gz
 elasticsearch_dir: elasticsearch-8.16.1
 elasticsearch_home_var: ES_HOME
