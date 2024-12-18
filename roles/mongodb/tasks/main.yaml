@@ -2,7 +2,7 @@
   ansible.builtin.template:
     src: mongodb-org.repo.j2
     dest: "/etc/yum.repos.d/mongodb-org-{{ mongodb_version }}.repo"
-    mode: 0644
+    mode: "0644"
 
 - name: Install mongodb
   ansible.builtin.yum:
@@ -13,7 +13,7 @@
   ansible.builtin.systemd:
     name: mongod
     state: started
-    enabled: yes
+    enabled: true
 
 - name: Get hostname of current host
   ansible.builtin.shell: echo $HOSTNAME
@@ -25,10 +25,10 @@
   ansible.builtin.replace:
     path: /etc/mongod.conf
     regexp: '127.0.0.1'
-    replace: {{ result_hostname.stdout }}
+    replace: "{{ result_hostname.stdout }}"
 
 - name: Restart mongodb
   ansible.builtin.systemd:
     name: mongod
     state: restarted
-    enabled: yes  
+    enabled: true
