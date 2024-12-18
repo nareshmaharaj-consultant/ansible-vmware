@@ -28,6 +28,7 @@ python_pip_installs_req:
   - pycairo
   - bottle
   - SQLAlchemy
+  - pymongo
 firewall_ports:
   - 6443/tcp
   - 10250/tcp
@@ -55,3 +56,4 @@ scala_install_loc: /home/nmaharaj/cs-aarch64-pc-linux.gz
 scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala
 scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
 scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
+mongodb_version: 8.0
