@@ -44,9 +44,6 @@ firewall_ports:
   - 27018/tcp
   - 27019/tcp
   - 27027/tcp
-  - 28017/tcp
-  - 28018/tcp
-  - 28019/tcp
   - 28027/tcp
   - 29027/tcp
   - 30027/tcp
