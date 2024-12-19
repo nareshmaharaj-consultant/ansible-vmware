@@ -13,6 +13,17 @@
   become: true
   tags: mongodb
 
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: /tmp/mongodb-27017.sock
+  register: result
+  tags: mongodb
+
+- name: Print return information from the previous task
+  ansible.builtin.debug:
+    var: result
+    verbosity: 2
+
 - name: Start mongodb
   ansible.builtin.systemd:
     name: mongod
