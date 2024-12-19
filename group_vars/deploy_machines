@@ -38,6 +38,9 @@ firewall_ports:
   - 9145/tcp
   - 8888/tcp
   - 2181/tcp
+  - 27017/tcp
+  - 27018/tcp
+  - 27019/tcp
   - 27027/tcp
   - 28027/tcp
   - 29027/tcp
@@ -57,3 +60,6 @@ scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala
 scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
 scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
 mongodb_version: 8.0
+mongodb_arch: aarch64
+mongodb_os: redhat
+mongodb_os_ver: 9

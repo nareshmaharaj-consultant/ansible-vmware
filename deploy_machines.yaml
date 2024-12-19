@@ -1,3 +1,4 @@
+# ansible-playbook -i production deploy_machines.yaml -t tag1,tag2
 - name: Deploy Machines Define Roles
   hosts: deploy_machines
   roles:
