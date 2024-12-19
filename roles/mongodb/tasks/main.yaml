@@ -13,16 +13,26 @@
   become: true
   tags: mongodb
 
-- name: Check if file exists
-  ansible.builtin.stat:
-    path: /tmp/mongodb-27017.sock
+# This checks if the word "inactive" is not present in
+# the output (stdout) of the command. If it is not present,
+# the task will fail.
+- name: Check if mongodb is running
+  ansible.builtin.command:
+    cmd: systemctl is-active mongod
   register: result
-  tags: mongodb
+  failed_when: result.rc != 0 and "inactive" not in result.stdout
+  changed_when: false
+  become: true
+  tags:
+    - mongodb-running
+    - mongodb
 
-- name: Print return information from the previous task
+- name: Debug MongoDB status
   ansible.builtin.debug:
-    var: result
-    verbosity: 2
+    msg: "MongoDB is {{ result.stdout }}"
+  tags:
+    - mongodb-running
+    - mongodb
 
 - name: Start mongodb
   ansible.builtin.systemd:
@@ -30,6 +40,7 @@
     state: started
     enabled: true
   become: true
+  when: result.rc != 0 or result.stdout.find("inactive") == 1
   tags: mongodb
 
 - name: Get hostname of current host
@@ -47,3 +58,19 @@
   notify:
     - Restart Mongodb
   tags: mongodb
+
+# Create a replicaset called 'rs0' with the 3 provided members
+- name: Ensure replicaset rs0 exists
+  community.mongodb.mongodb_replicaset:
+    login_host: "{{ result_hostname.stdout }}"
+    login_user: admin
+    login_password: admin
+    replica_set: rs0
+    members:
+      - broker03:27017
+      - broker04:27017
+      - broker05:27017
+  become: true
+  tags:
+    - mongodb-rs0
+    - mongodb

@@ -29,6 +29,8 @@ python_pip_installs_req:
   - bottle
   - SQLAlchemy
   - pymongo
+python_pip_installs_req_root:
+  - pymongo
 firewall_ports:
   - 6443/tcp
   - 10250/tcp
@@ -42,6 +44,9 @@ firewall_ports:
   - 27018/tcp
   - 27019/tcp
   - 27027/tcp
+  - 28017/tcp
+  - 28018/tcp
+  - 28019/tcp
   - 28027/tcp
   - 29027/tcp
   - 30027/tcp

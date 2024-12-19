@@ -192,13 +192,26 @@
   when: python_pip_installs_req | length > 0
   tags: pip_lib_installs
 
+# -- Python Packages Installed using pip at root level-- #
+- name: (root) Python Packages Required Using pip
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ python_pip_installs_req_root | default([]) }}"
+  become: true
+  when: python_pip_installs_req_root | length > 0
+  tags: pip_lib_installs_root
+
+
 # -- Firewall Settings -- #
 - name: Gather firewall info before changes
   ansible.posix.firewalld_info:
     active_zones: true
   register: before_fw_chg
   become: true
-  tags: firewall_before
+  tags:
+    - firewall_before
+    - firewall
 
 - name: Add Firewall Port
   ansible.posix.firewalld:
@@ -209,26 +222,34 @@
   loop: "{{ firewall_ports | default([]) }}"
   when: firewall_ports | length > 0
   become: true
-  tags: firewall_add
+  tags:
+    - firewall_add
+    - firewall
 
 - name: Gather firewall info after changes
   ansible.posix.firewalld_info:
     active_zones: true
   register: after_fw_chg
   become: true
-  tags: firewall_after
+  tags:
+    - firewall_after
+    - firewall
 
 - name: Compare Firewall Open Ports Before & After Results
   ansible.builtin.set_fact:
     all_ports_open: "{{ (after_fw_chg.firewalld_info.zones.public.ports | difference(before_fw_chg.firewalld_info.zones.public.ports)) }}"
-  tags: firewall_i
+  tags:
+    - firewall_i
+    - firewall
 
 - name: Restart network service for firewalld
   ansible.builtin.service:
     name: firewalld
     state: restarted
   when: all_ports_open | length > 0
-  tags: firewall_r
+  tags:
+    - firewall_r
+    - firewall
 
 # -- Disable Swap for DBs -- #
 - name: Check Swapon devices
