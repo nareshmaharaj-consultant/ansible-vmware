@@ -65,3 +65,4 @@ mongodb_version: 8.0
 mongodb_arch: aarch64
 mongodb_os: redhat
 mongodb_os_ver: 9
+mongodb_reconfigure: true

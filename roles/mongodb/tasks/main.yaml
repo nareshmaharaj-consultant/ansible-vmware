@@ -20,7 +20,7 @@
   ansible.builtin.command:
     cmd: systemctl is-active mongod
   register: result
-  failed_when: result.rc != 0 and "inactive" not in result.stdout
+  failed_when: result.rc != 0 and result.stdout.find("inactive") == -1 and result.stdout.find("failed") == -1
   changed_when: false
   become: true
   tags:
@@ -40,7 +40,7 @@
     state: started
     enabled: true
   become: true
-  when: result.rc != 0 or result.stdout.find("inactive") == 1
+  when: result.rc != 0 and [ result.stdout.find("inactive") == 1 or result.stdout.find("failed") == 1 ]
   tags: mongodb
 
 - name: Get hostname of current host
@@ -66,6 +66,7 @@
     login_user: admin
     login_password: admin
     replica_set: rs0
+    # reconfigure: "{{ mongodb_reconfigure }}"
     members:
       - broker03:27017
       - broker04:27017
