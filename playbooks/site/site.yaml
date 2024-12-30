@@ -1,3 +1,4 @@
+# ansible-playbook -i production site.yaml -t tag1,tag2
 - name: Import Jenkins Playbook
   ansible.builtin.import_playbook: jenkins.yaml
 

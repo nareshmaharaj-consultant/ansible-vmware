@@ -6,28 +6,6 @@
   tags:
     - py-install-d
 
-- name: Import Jenkins GPG Key URL
-  ansible.builtin.rpm_key:
-    state: present
-    key: "{{ jenkins_gpg_key_url }}"
-  become: true
-  tags: jenkins-key
-
-- name: Add Jenkins repository
-  ansible.builtin.get_url:
-    url: "{{ jenkins_repo_url }}"
-    dest: "{{ jenkins_repo_dest }}"
-    mode: "0644"
-  tags: jenkins-repo
-  become: true
-
-- name: "Ignore cert check"
-  ansible.builtin.lineinfile:
-    path: /etc/yum.repos.d/jenkins.repo
-    state: present
-    line: "sslverify={{ jenkins_ssl_verify }}"
-  tags: libs
-
 - name: Install Jenkin Dependencies
   ansible.builtin.dnf:
     name: "{{ item }}"
@@ -36,20 +14,62 @@
   become: true
   tags: libs
 
-- name: Restart service jenkins
-  ansible.builtin.systemd_service:
-    state: started
-    daemon_reload: true
-    enabled: true
-    name: jenkins
+- name: Download jenkins war file
+  ansible.builtin.get_url:
+    url: "{{ jenkins_war_file_url }}"
+    dest: "{{ jenkins_war_file_dest }}"
+    mode: "0644"
+  tags: war_file
   become: true
+
+- name: Add service template file for Jenkins
+  ansible.builtin.template:
+    src: jenkins.service.j2
+    dest: /etc/systemd/system/jenkins.service
+    mode: "0644"
   tags: jenkins-service
+  become: true
+
+- name: Create jenkins user
+  ansible.builtin.user:
+    name: jenkins
+    state: present
+    shell: /bin/bash
+    home: /var/lib/jenkins
+  tags: jenkins-user
+  become: true
+
+- name: Change ownership of jenkins home directory
+  ansible.builtin.file:
+    path: "{{ jenkins_war_dir }}"
+    owner: jenkins
+    group: jenkins
+    recurse: yes
+  tags: jenkins-user
+  become: true
+
+- name: Start Jenkins Service, reload and enable
+  ansible.builtin.systemd:
+    name: jenkins
+    state: started
+    daemon_reload: yes
+    enabled: yes
+  tags: jenkins-service
+  become: true
+
+- name: Run Jenkins Service
+  ansible.builtin.systemd:
+    name: jenkins
+    state: started
+    enabled: yes
+  tags: jenkins-service
+  become: true
 
 - name: Get Firewall Info for Jenkins
   ansible.builtin.shell:
-    cmd: "set -o pipefail;netstat -tuln | awk '{print $4}' | grep $8080 | sed 's/:*//'"
+    cmd: "sudo firewall-cmd --list-ports | grep 8080"
   register: jenkins_firewall_service_up
-  changed_when: jenkins_firewall_service_up.stdout.find("8080") == -1
+  changed_when: jenkins_firewall_service_up.stdout.find("8080/tcp") == -1
   tags: firewall
 
 - name: Firewall Port Exception for Jenkins
@@ -88,7 +108,7 @@
     firewall-cmd --reload
   args:
     executable: /usr/bin/bash
-  when: jenkins_firewall_service_up.stdout.find("8080") == -1
+  when: jenkins_firewall_service_up.stdout.find("8080/tcp") == -1
   register: result
   changed_when: result.rc == 0
   tags: firewall

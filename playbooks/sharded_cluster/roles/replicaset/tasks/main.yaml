@@ -1,0 +1,92 @@
+---
+# Default login credentials
+# mongosh --authenticationDatabase admin --host  0.0.0.0 --port 27018
+
+- name: Print Debug Info for Replicaset
+  ansible.builtin.debug:
+    msg: "The mongod_port is: {{ mongod_port }}"
+  tags: debug_replicaset
+
+- name: Print Debug Info for Replicaset
+  ansible.builtin.debug:
+    msg: "The replicaset_members is: {{ replicaset_members }}"
+  tags: debug_replicaset
+
+- name: Replace mongod.conf with template
+  ansible.builtin.template:
+    src: mongod.conf.j2
+    dest: /etc/mongod.conf
+    owner: mongod
+    group: mongod
+    mode: '0644'
+  become: true
+  notify:
+    - restart_mongod
+  tags: mongod_config
+
+- name: Ensure Mongodb is running
+  ansible.builtin.service:
+    name: mongod
+    state: started
+    enabled: true
+  become: true
+  tags: mongod_config
+
+
+- name: Initialise MongoDB Replicaset
+  community.mongodb.mongodb_replicaset:
+    login_database: "admin"
+    login_host: localhost
+    login_port: "{{ mongod_port }}"
+    replica_set: "{{ repl_set_name }}"
+    members: "{{ replicaset_members }}"
+  register: repl
+
+- name: Wait for rs config to settle
+  pause:
+    seconds: 5
+  when: repl.changed
+
+- name: Has MongoDB Admin User been created already?
+  stat:
+    path: /root/mongodb_admin.success
+  register: mongodb_admin
+
+- name: Ensure replicaset has reached a converged state
+  community.mongodb.mongodb_status:
+    replica_set: "{{ repl_set_name }}"
+    login_port: "{{ mongod_port }}"
+    poll: 10
+    interval: 10
+  when: repl.changed == true
+
+- name: Add MongoDB Admin User using localhost exception
+  community.mongodb.mongodb_user:
+    name: "{{ admin_user }}"
+    password: "{{ admin_user_password }}"
+    login_port: "{{ mongod_port }}"
+    database: admin
+    roles:
+      - "root"
+  when: mongodb_admin.stat.exists == false
+
+- shell: "mongo admin --port {{ mongod_port }} --username {{ admin_user }} --password {{ admin_user_password }} --eval 'db.runCommand({listDatabases: 1})' && touch /root/mongodb_admin.success"
+  args:
+    creates: /root/mongodb_admin.success
+  when: mongodb_admin.stat.exists == false
+  ignore_errors: yes
+
+- name: Add MongoDB App Users on the replicaset
+  community.mongodb.mongodb_user:
+    login_user: "{{ admin_user }}"
+    login_password: "{{ admin_user_password }}"
+    login_port: "{{ mongod_port }}"
+    login_database: admin
+    user: "{{ item.username }}"
+    password: "{{ item.password }}"
+    database: "{{ item.database }}"
+    roles: "{{ item.roles }}"
+    update_password: "on_create"
+  with_items:
+    - "{{ app_users }}"
+  no_log: yes

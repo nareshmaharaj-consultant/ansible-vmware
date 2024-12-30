@@ -1,0 +1,18 @@
+[Unit]
+Description=Jenkins Automation Server
+After=network.target
+
+[Service]
+User=jenkins
+Group=jenkins
+WorkingDirectory={{ jenkins_war_dir }}
+ExecStart=/usr/bin/java -jar {{ jenkins_war_file_dest}}
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=jenkins
+Environment=JAVA_HOME={{ java_home }}
+
+[Install]
+WantedBy=multi-user.target

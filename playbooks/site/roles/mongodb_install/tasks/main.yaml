@@ -1,0 +1,8 @@
+# tasks file for mongodb_install
+- name: Install MongoDB Packages
+  package:
+    name: "{{ mongodb_packages }}"
+    state: present
+  become: yes
+  tags: mongo_install
+  when: ansible_os_family == "RedHat"

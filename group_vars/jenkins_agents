@@ -3,12 +3,6 @@ libs:
   - python3-devel
   - dnf-plugins-core
   - sshpass
-docker_libs:
-  - docker-ce
-  - docker-ce-cli
-  - containerd.io
-  - docker-buildx-plugin
-  - docker-compose-plugin
 pip_min_dep: packaging
 python_pip_installs_req:
   - ansible-lint

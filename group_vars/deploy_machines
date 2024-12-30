@@ -10,6 +10,15 @@ libs:
   - python3-devel
   - python-firewall
   - log4j
+  - nc
+  - net-tools
+  - wget
+  - curl
+  - git
+  - unzip
+  - tar
+  - gzip
+
 python_libs:
   - openssl-devel
   - bzip2-devel
@@ -61,8 +70,7 @@ scala_install_loc: /home/nmaharaj/cs-aarch64-pc-linux.gz
 scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala
 scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
 scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
-mongodb_version: 8.0
+mongodb_version: 6.0
 mongodb_arch: aarch64
 mongodb_os: redhat
 mongodb_os_ver: 9
-mongodb_reconfigure: true
