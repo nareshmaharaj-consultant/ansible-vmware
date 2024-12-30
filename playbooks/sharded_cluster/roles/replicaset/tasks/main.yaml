@@ -32,7 +32,6 @@
   become: true
   tags: mongod_config
 
-
 - name: Initialise MongoDB Replicaset
   community.mongodb.mongodb_replicaset:
     login_database: "admin"
@@ -43,6 +42,11 @@
   notify:
     - Wait for rs config to settle
   register: repl
+
+- name: Wait for rs config to settle
+  ansible.builtin.pause:
+    seconds: 5
+  when: repl.changed
 
 - name: Has MongoDB Admin User been created already?
   ansible.builtin.stat:

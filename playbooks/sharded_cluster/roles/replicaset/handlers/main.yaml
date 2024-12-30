@@ -5,8 +5,3 @@
     enabled: true
   become: true
   tags: mongodb
-
-- name: Wait for rs config to settle
-  ansible.builtin.pause:
-    seconds: 5
-  when: repl.changed
