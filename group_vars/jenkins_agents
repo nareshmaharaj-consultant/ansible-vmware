@@ -3,6 +3,7 @@ libs:
   - python3-devel
   - dnf-plugins-core
   - sshpass
+  - git
 pip_min_dep: packaging
 python_pip_installs_req:
   - ansible-lint

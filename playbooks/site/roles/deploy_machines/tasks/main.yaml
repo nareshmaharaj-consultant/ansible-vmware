@@ -261,7 +261,7 @@
     set -o pipefail
     cat /proc/swaps | egrep -v ^File || true | wc -l
   register: swap_enabled
-  changed_when: swap_enabled.stdout.find("0") == -1
+  changed_when: false
   tags: swap
 
 - name: Disable Swap
