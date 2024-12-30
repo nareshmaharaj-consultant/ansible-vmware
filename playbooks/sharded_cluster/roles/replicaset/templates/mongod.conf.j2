@@ -23,7 +23,7 @@ processManagement:
 
 # network interfaces
 net:
-  port: {{ mongod_port }}
+  port: {{ replicaset_mongod_port }}
   bindIp: 0.0.0.0
 
 security:
@@ -33,7 +33,7 @@ security:
 #operationProfiling:
 
 replication:
-  replSetName: {{ repl_set_name}}
+  replSetName: {{ replicaset_repl_set_name}}
 
 sharding:
   clusterRole: shardsvr

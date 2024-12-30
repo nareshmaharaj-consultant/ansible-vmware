@@ -4,7 +4,7 @@
 
 - name: Print Debug Info for Replicaset
   ansible.builtin.debug:
-    msg: "The mongod_port is: {{ mongod_port }}"
+    msg: "The mongod_port is: {{ replicaset_mongod_port }}"
   tags: debug_replicaset
 
 - name: Print Debug Info for Replicaset
@@ -37,50 +37,53 @@
   community.mongodb.mongodb_replicaset:
     login_database: "admin"
     login_host: localhost
-    login_port: "{{ mongod_port }}"
-    replica_set: "{{ repl_set_name }}"
+    login_port: "{{ replicaset_mongod_port }}"
+    replica_set: "{{ replicaset_repl_set_name }}"
     members: "{{ replicaset_members }}"
+  notify:
+    - Wait for rs config to settle
   register: repl
 
-- name: Wait for rs config to settle
-  pause:
-    seconds: 5
-  when: repl.changed
-
 - name: Has MongoDB Admin User been created already?
-  stat:
+  ansible.builtin.stat:
     path: /root/mongodb_admin.success
   register: mongodb_admin
 
 - name: Ensure replicaset has reached a converged state
   community.mongodb.mongodb_status:
-    replica_set: "{{ repl_set_name }}"
-    login_port: "{{ mongod_port }}"
+    replica_set: "{{ replicaset_repl_set_name }}"
+    login_port: "{{ replicaset_mongod_port }}"
     poll: 10
     interval: 10
-  when: repl.changed == true
+  when: repl.changed
 
 - name: Add MongoDB Admin User using localhost exception
   community.mongodb.mongodb_user:
-    name: "{{ admin_user }}"
-    password: "{{ admin_user_password }}"
-    login_port: "{{ mongod_port }}"
+    name: "{{ replicaset_admin_user }}"
+    password: "{{ replicaset_admin_user_password }}"
+    login_port: "{{ replicaset_mongod_port }}"
     database: admin
     roles:
       - "root"
-  when: mongodb_admin.stat.exists == false
+  when: not mongodb_admin.stat.exists
 
-- shell: "mongo admin --port {{ mongod_port }} --username {{ admin_user }} --password {{ admin_user_password }} --eval 'db.runCommand({listDatabases: 1})' && touch /root/mongodb_admin.success"
+- name: Evaluate mongod success with admin user
+  ansible.builtin.shell: |
+    mongo admin --port {{ replicaset_mongod_port }} \
+    --username {{ replicaset_admin_user }} \
+    --password {{ replicaset_admin_user_password }} \
+    --eval 'db.runCommand({listDatabases: 1})' && \
+    touch /root/mongodb_admin.success
   args:
     creates: /root/mongodb_admin.success
-  when: mongodb_admin.stat.exists == false
-  ignore_errors: yes
+  when: not mongodb_admin.stat.exists
+  ignore_errors: false
 
 - name: Add MongoDB App Users on the replicaset
   community.mongodb.mongodb_user:
-    login_user: "{{ admin_user }}"
-    login_password: "{{ admin_user_password }}"
-    login_port: "{{ mongod_port }}"
+    login_user: "{{ replicaset_admin_user }}"
+    login_password: "{{ replicaset_admin_user_password }}"
+    login_port: "{{ replicaset_mongod_port }}"
     login_database: admin
     user: "{{ item.username }}"
     password: "{{ item.password }}"
@@ -88,5 +91,5 @@
     roles: "{{ item.roles }}"
     update_password: "on_create"
   with_items:
-    - "{{ app_users }}"
-  no_log: yes
+    - "{{ replicaset_app_users }}"
+  no_log: true

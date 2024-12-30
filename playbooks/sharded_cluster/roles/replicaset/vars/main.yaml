@@ -1,32 +1,31 @@
 ---
-  admin_user: admin
-  admin_password: password1234
-  mongod_port: 27018
-  resize_mb: 2048
-  compact_role: true
-  repl_set_name: rs0
-  mongod_service: "mongod"
-  reboot_timeout: 3600
-  mongod_data_dir: "/var/lib/mongo"
-  mongos_port: 27017
-  replicaset_members:
-    - "broker03:27018"
-    - "broker04:27018"
-    - "broker05:27018"
-  app_users:
-    - username: "appuser1"
-      password: "password1234"
-      database: "appdb"
-      roles:
-        - "readWrite"
-    - username: "appuser2"
-      password: "password1234"
-      database: "appdb"
-      roles:
-        - "readWrite"
-    - username: "appuser3"
-      password: "password1234"
-      database: "appdb"
-      roles:
-        - "readWrite"
-  
+replicaset_admin_user: admin
+replicaset_admin_password: password1234
+replicaset_mongod_port: 27018
+replicaset_resize_mb: 2048
+replicaset_compact_role: true
+replicaset_repl_set_name: rs0
+replicaset_mongod_service: "mongod"
+replicaset_reboot_timeout: 3600
+replicaset_mongod_data_dir: "/var/lib/mongo"
+replicaset_mongos_port: 27017
+replicaset_members:
+  - "broker03:27018"
+  - "broker04:27018"
+  - "broker05:27018"
+replicaset_app_users:
+  - username: "appuser1"
+    password: "password1234"
+    database: "appdb"
+    roles:
+      - "readWrite"
+  - username: "appuser2"
+    password: "password1234"
+    database: "appdb"
+    roles:
+      - "readWrite"
+  - username: "appuser3"
+    password: "password1234"
+    database: "appdb"
+    roles:
+      - "readWrite"

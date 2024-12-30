@@ -1,6 +1,7 @@
 ---
-- hosts: deploy_machines
-  gather_facts: yes
+- name: "Deploy Machines Define Roles for MongoDB"
+  hosts: deploy_machines
+  gather_facts: true
   become: true
   roles:
     - role: "community.mongodb.mongodb_linux"
@@ -10,7 +11,3 @@
     - { role: "community.mongodb.mongodb_mongod", sharding: true }
     - role: "shard"
     - role: "replicaset"
- 
-
-
-    

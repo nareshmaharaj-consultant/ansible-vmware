@@ -33,7 +33,7 @@
   loop: "{{ python_pip_installs_req | default([]) }}"
   when: python_pip_installs_req | length > 0
   tags: pip_lib_installs
-  
+
 - name: Storing ssh public key for jenkins agent.
   ansible.builtin.fetch:
     src: "/home/{{ user }}/.ssh/id_rsa.pub"

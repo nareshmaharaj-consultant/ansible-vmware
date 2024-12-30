@@ -1,15 +1,15 @@
 - name: Ensure python3 is available
-  package:
+  ansible.builtin.package:
     name: python3
   tags: deps
 
 - name: Ensure pymongo is installed
-  pip:
+  ansible.builtin.pip:
     name: pymongo==4.10.1
     state: present
   tags: deps
 
-- name: ansible_hostname
+- name: Echo hostname
   ansible.builtin.debug:
     msg: "The ansible_hostname is: {{ ansible_hostname }}"
   tags: deps
