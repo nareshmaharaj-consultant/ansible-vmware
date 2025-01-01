@@ -68,9 +68,10 @@ java_dir_loc: /etc/alternatives/java_sdk_17_openjdk/bin/
 java_dir_link_to: /usr/bin/
 scala_install_loc: /home/devops1/cs-aarch64-pc-linux.gz
 scala_binary: /home/devops1/.local/share/coursier/bin/scala
-scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
-scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
+# Scala download urls are defined in the roles/scala/defaults/main.yml file
+
 mongodb_version: 6.0
-mongodb_arch: aarch64
+# mongodb_arch_i4: aarch64    # mac i4
+# mongodb_arch_x86_64: x86_64 # intel
 mongodb_os: redhat
 mongodb_os_ver: 9

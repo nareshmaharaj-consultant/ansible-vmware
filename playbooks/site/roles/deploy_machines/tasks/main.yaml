@@ -40,17 +40,27 @@
   changed_when: scala_present.stdout == ""
   become: true
   become_user: "{{ user }}"
-  tags: scala_i
+  tags: scala
 
-- name: Download Scala
-  ansible.builtin.get_url:
-    url: "{{ scala_download_url_arm }}"
-    dest: "{{ scala_install_loc }}"
-    mode: '0766'
-  when: scala_present.stdout.find('Scala') == -1
-  become: true
-  become_user: "{{ user }}"
-  tags: scala_download
+- name: Set Scala download URL based on architecture logic
+  ansible.builtin.set_fact:
+    scala_download_url: >-
+      {% if ansible_facts.architecture == 'x86_64' %}
+        "{{deploy_scala_download_url_x86 | replace('"','') }}"
+      {% else %}
+        "{{depoy_scala_download_url_arm | replace('"','') }}"
+      {% endif %}
+  tags: scala1
+
+- name: Debug print ansilbe_facts
+  ansible.builtin.debug:
+    var: ansible_facts.architecture
+  tags: scala
+
+- name: Debug Print Scala Download URL
+  ansible.builtin.debug:
+    msg: "{{ scala_download_url | replace(' ','') | replace('\"','') }}"
+  tags: scala1
 
 - name: Remove Scala Previous Install
   ansible.builtin.file:
@@ -60,13 +70,13 @@
 
 - name: Download Scala
   ansible.builtin.get_url:
-    url: "{{ scala_download_url_arm }}"
+    url: "{{ scala_download_url | replace(' ','') | replace('\"','')  }}"
     dest: "{{ scala_install_loc }}"
     mode: '0766'
   when: scala_present.stdout.find('Scala') == -1
   become: true
   become_user: "{{ user }}"
-  tags: scala_download
+  tags: scala
 
 - name: Gunzip extract
   ansible.builtin.shell:
@@ -76,7 +86,7 @@
   when: scala_present.stdout.find('Scala') == -1
   become: true
   become_user: "{{ user }}"
-  tags: scala_extract
+  tags: scala
 
 - name: Install Scala
   ansible.builtin.shell: chmod +x cs && ./cs setup -y
@@ -85,13 +95,13 @@
   changed_when: result.rc == 0
   become: true
   become_user: "{{ user }}"
-  tags: scala_install
+  tags: scala
 
 - name: Remove Scala Install
   ansible.builtin.file:
     path: "{{ scala_install_loc }}"
     state: absent
-  tags: scala_clean
+  tags: scala
 
 # Install Python
 - name: Group Install Development Tools
@@ -247,7 +257,7 @@
     name: firewalld
     state: restarted
   retries: 3
-  delay: 10
+  delay: 60
   register: result
   until: result is succeeded
   when: all_ports_open | length > 0
