@@ -3,10 +3,11 @@ libs:
   - wget
   - git
 pip_min_dep: packaging
-user: nmaharaj
+user: devops1
+group: devops
 hostnames_env:
-  - 172.16.5.145 broker01 jenkins
-  - 172.16.5.146 broker02 jenkins-node
-  - 172.16.5.144 broker03
-  - 172.16.5.147 broker04
-  - 172.16.5.148 broker05
+  - 192.168.56.151 broker01 jenkins
+  - 192.168.56.152 broker02 jenkins-node
+  - 192.168.56.153 broker03
+  - 192.168.56.154 broker04
+  - 192.168.56.155 broker05

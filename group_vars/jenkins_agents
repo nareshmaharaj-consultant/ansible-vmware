@@ -7,3 +7,6 @@ libs:
 pip_min_dep: packaging
 python_pip_installs_req:
   - ansible-lint
+# Used to ensure that the Jenkins agent can connect to the Jenkins master and deployment servers
+# This is the public key of the Jenkins agent
+jenkins_agent_pub_key: id_ed25519

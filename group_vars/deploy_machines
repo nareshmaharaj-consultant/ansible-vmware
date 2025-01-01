@@ -66,8 +66,8 @@ firewall_ports:
   - 22/tcp
 java_dir_loc: /etc/alternatives/java_sdk_17_openjdk/bin/
 java_dir_link_to: /usr/bin/
-scala_install_loc: /home/nmaharaj/cs-aarch64-pc-linux.gz
-scala_binary: /home/nmaharaj/.local/share/coursier/bin/scala
+scala_install_loc: /home/devops1/cs-aarch64-pc-linux.gz
+scala_binary: /home/devops1/.local/share/coursier/bin/scala
 scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
 scala_download_url_amd: https://github.com/coursier/coursier/releases/latest/download/cs-aarch64-pc-linux.gz
 mongodb_version: 6.0

@@ -3,7 +3,7 @@
 #  Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 #end
 
-NUM_WORKER_NODES=1
+NUM_WORKER_NODES=5
 METRIC_NODE_ID=NUM_WORKER_NODES + 1
 IP_NW="192.168.56."
 IP_START=150
@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
     cat "#{REMOTE_SSH_FILENAME}" >> /home/#{USER_NEW}/.ssh/authorized_keys
     rm "#{REMOTE_SSH_FILENAME}"  # Clean up after copying
     echo "vagrant ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
-    echo "#{USER_GROUP_NEW} ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+    echo "#{USER_NEW} ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
   SHELL
 
   (1..NUM_WORKER_NODES).each do |i|

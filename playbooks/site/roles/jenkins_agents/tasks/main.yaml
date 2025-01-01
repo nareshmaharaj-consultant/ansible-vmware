@@ -12,7 +12,7 @@
     state: directory
     mode: '0755'
     owner: "{{ user }}"
-    group: "{{ user }}"
+    group: "{{ group }}"
   become: true
   tags: jenkins_agent_dir
 
@@ -36,7 +36,7 @@
 
 - name: Storing ssh public key for jenkins agent.
   ansible.builtin.fetch:
-    src: "/home/{{ user }}/.ssh/id_rsa.pub"
+    src: "/home/{{ user }}/.ssh/{{ jenkins_agent_pub_key }}"
     dest: jenkins_agent_pub_key/
     flat: true
   tags: get_jenkins_node_pub

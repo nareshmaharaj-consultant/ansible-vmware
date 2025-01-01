@@ -14,6 +14,14 @@
   become: true
   tags: libs
 
+- name: Create directory for Jenkins
+  ansible.builtin.file:
+    path: "{{ jenkins_war_dir }}"
+    state: directory
+    mode: "0755"
+  tags: jenkins-dir
+  become: true
+
 - name: Download jenkins war file
   ansible.builtin.get_url:
     url: "{{ jenkins_war_file_url }}"
@@ -66,8 +74,8 @@
   become: true
 
 - name: Get Firewall Info for Jenkins
-  ansible.builtin.shell:
-    cmd: set -o pipefail;firewall-cmd --list-ports | grep 8080
+  ansible.builtin.shell: 
+    cmd: set -o pipefail;firewall-cmd --list-ports | grep 8080 || echo 0
   register: jenkins_firewall_service_up
   changed_when: jenkins_firewall_service_up.stdout.find("8080/tcp") == -1
   become: true
@@ -112,6 +120,7 @@
   when: jenkins_firewall_service_up.stdout.find("8080/tcp") == -1
   register: result
   changed_when: result.rc == 0
+  become: true
   tags: firewall
 
 
