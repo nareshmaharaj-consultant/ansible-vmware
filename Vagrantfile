@@ -3,12 +3,16 @@
 #  Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 #end
 
-NUM_WORKER_NODES=5
+NUM_WORKER_NODES=1
 METRIC_NODE_ID=NUM_WORKER_NODES + 1
 IP_NW="192.168.56."
 IP_START=150
 PUB_SSH_KEY_FILE="/Users/nareshmaharaj/.ssh/id_ed25519.pub"
 REMOTE_SSH_FILENAME="/home/vagrant/id_ed25519.pub"
+USER_NEW="devops1"
+USER_PWD="password1234"
+CRYPT_SALT="mysalt"
+USER_GROUP_NEW="devops"
 
 ALLOW_METRICS = false
 
@@ -20,9 +24,17 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder "data/", "/data", create: true
   config.vm.provision "file", source: "#{PUB_SSH_KEY_FILE}", destination: "#{REMOTE_SSH_FILENAME}"
   config.vm.provision "shell", inline: <<-SHELL
+    groupadd "#{USER_GROUP_NEW}"
+    sudo adduser "#{USER_NEW}" -m -p `openssl passwd -6 -salt "#{CRYPT_SALT}" "#{USER_PWD}"` -g "#{USER_GROUP_NEW}"
+    mkdir "/home/#{USER_NEW}/.ssh"
+    chmod 700 "/home/#{USER_NEW}/.ssh"
+    ssh-keygen -t ed25519 -N "" -f "/home/#{USER_NEW}/.ssh/id_ed25519"
+    chown "#{USER_NEW}:#{USER_GROUP_NEW}" -R "/home/#{USER_NEW}/.ssh/"
     cat "#{REMOTE_SSH_FILENAME}" >> /home/vagrant/.ssh/authorized_keys
+    cat "#{REMOTE_SSH_FILENAME}" >> /home/#{USER_NEW}/.ssh/authorized_keys
     rm "#{REMOTE_SSH_FILENAME}"  # Clean up after copying
     echo "vagrant ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
+    echo "#{USER_GROUP_NEW} ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers && sudo visudo -cf /etc/sudoers
   SHELL
 
   (1..NUM_WORKER_NODES).each do |i|
