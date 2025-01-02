@@ -48,7 +48,7 @@
       {% if ansible_facts.architecture == 'x86_64' %}
         "{{deploy_scala_download_url_x86 | replace('"','') }}"
       {% else %}
-        "{{depoy_scala_download_url_arm | replace('"','') }}"
+        "{{deploy_scala_download_url_arm | replace('"','') }}"
       {% endif %}
   tags: scala1
 
@@ -275,9 +275,13 @@
   tags: swap
 
 - name: Disable Swap
-  ansible.builtin.shell:
-    cmd: set -o pipefail;swapoff -a;sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab;cat /proc/meminfo | grep Swap | grep Total | awk '{print $2}'
+  ansible.builtin.shell: |
+    set -o pipefail
+    swapoff -a
+    sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+    cat /proc/meminfo | grep Swap | grep Total | awk '{print $2}'
   register: swap_size
+  become: true
   changed_when: swap_size.stdout.find('0') == -1
   when: swap_enabled.stdout.find('0') == -1
   tags: swap

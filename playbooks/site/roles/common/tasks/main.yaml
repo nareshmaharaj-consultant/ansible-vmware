@@ -3,7 +3,7 @@
     path: /etc/hosts
     state: present
     line: "{{ item }}"
-  loop: "{{ hostnames_env }}"
+  loop: "{{ global.hostnames_env }}"
   tags: host_name
   become: true
 

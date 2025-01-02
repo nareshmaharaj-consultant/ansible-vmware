@@ -1,8 +1,12 @@
 all:
   vars:
     global:
-      - any1
-      - any2
+      hostnames_env:
+        - 172.16.5.145 broker01 jenkins
+        - 172.16.5.146 broker02 jenkins-node
+        - 172.16.5.144 broker03
+        - 172.16.5.147 broker04
+        - 172.16.5.148 broker05
   children:
     jenkins:
       hosts:
