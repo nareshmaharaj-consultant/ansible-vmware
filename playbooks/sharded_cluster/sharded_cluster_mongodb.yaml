@@ -9,5 +9,5 @@
     - role: "community.mongodb.mongodb_repository"
       mongodb_version: "6.0"
     - { role: "community.mongodb.mongodb_mongod", sharding: true }
-    - role: "shard"
+    - role: "shard1"
     - role: "replicaset"
