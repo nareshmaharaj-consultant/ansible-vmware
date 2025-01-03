@@ -7,3 +7,12 @@
 
 - name: Import Deploy Machines Playbook
   ansible.builtin.import_playbook: deploy_machines.yaml
+
+- name: Import Grafana Playbook
+  ansible.builtin.import_playbook: grafana.yaml
+
+# - name: Import Prometheus Playbook
+#   ansible.builtin.import_playbook: prometheus.yaml
+
+# - name: Import Sonarqube Playbook
+#   ansible.builtin.import_playbook: sonarqube.yaml

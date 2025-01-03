@@ -1,12 +1,12 @@
-- name: Display the OS family
-  ansible.builtin.debug:
-    msg: "The OS family is: {{ ansible_os_family }}"
-  tags: mongo_repo
+# - name: Display the OS family
+#   ansible.builtin.debug:
+#     msg: "The OS family is: {{ ansible_os_family }}"
+#   tags: mongo_repo
 
-- name: Debug print ansilbe_facts
-  ansible.builtin.debug:
-    var: ansible_facts.architecture
-  tags: mongo_repo
+# - name: Debug print ansilbe_facts
+#   ansible.builtin.debug:
+#     var: ansible_facts.architecture
+#   tags: mongo_repo
 
 # - name: Add Mongodb repo file
 #   ansible.builtin.template:
@@ -17,16 +17,16 @@
 #   tags: mongo_repo
 #   when: ansible_os_family == "RedHat"
 
-- name: Add MongoDB to yum repo
-  ansible.builtin.yum_repository:
-    name: mongodb-org-{{ mongodb_version }}
-    description: MongoDB Repository
-    baseurl: https://repo.mongodb.org/yum/{{ mongodb_os }}/{{ mongodb_os_ver}}/mongodb-org/{{ mongodb_version }}/{{ ansible_facts.architecture }}/
-    gpgcheck: true
-    gpgkey: https://pgp.mongodb.com/server-{{ mongodb_version }}.asc
-    enabled: true
-  become: true
-  tags: mongo_repo
-  when: ansible_os_family == "RedHat"
+# - name: Add MongoDB to yum repo
+#   ansible.builtin.yum_repository:
+#     name: mongodb-org-{{ mongodb_version }}
+#     description: MongoDB Repository
+#     baseurl: https://repo.mongodb.org/yum/{{ mongodb_os }}/{{ mongodb_os_ver}}/mongodb-org/{{ mongodb_version }}/{{ ansible_facts.architecture }}/
+#     gpgcheck: true
+#     gpgkey: https://pgp.mongodb.com/server-{{ mongodb_version }}.asc
+#     enabled: true
+#   become: true
+#   tags: mongo_repo
+#   when: ansible_os_family == "RedHat"
 
 
