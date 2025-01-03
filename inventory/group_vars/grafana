@@ -1,0 +1,3 @@
+grafana_install_package: grafana
+firewall_ports:
+  - 3000/tcp

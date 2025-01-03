@@ -1,0 +1,95 @@
+- name: Enable firewall port
+  ansible.posix.firewalld:
+    port: 3000/tcp
+    permanent: true
+    state: enabled
+  become: true
+  tags: grafana_install
+
+- name: Restart firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: restarted
+  become: true
+  tags: grafana_install
+
+- name: Download Grafana gpg key
+  ansible.builtin.get_url:
+    url: https://rpm.grafana.com/gpg.key
+    dest: /tmp/grafana_gpg.key
+  become: true
+  tags: grafana_install
+  when: ansible_os_family == "RedHat"
+
+- name: Import a key from a file
+  ansible.builtin.rpm_key:
+    state: present
+    key: /tmp/grafana_gpg.key
+  tags: grafana_install
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Install Grafana Repo for yum
+  ansible.builtin.yum_repository:
+    name: grafana
+    description: Grafana Stable Repo
+    baseurl: https://rpm.grafana.com
+    gpgcheck: 1
+    gpgkey: https://rpm.grafana.com/gpg.key
+    enabled: 1
+    sslverify: 1
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+  become: true
+  tags: grafana_install
+  when: ansible_os_family == "RedHat"
+
+- name: Install Grafana
+  ansible.builtin.package:
+    name: "{{ grafana_install_package }}"
+    state: present
+  become: true
+  tags: grafana_install
+  when: ansible_os_family == "RedHat"
+
+- name: Start Grafana
+  ansible.builtin.service:
+    name: grafana-server
+    state: started
+    daemon_reload: yes
+    enabled: true
+  become: true
+  tags: grafana_install
+  when: ansible_os_family == "RedHat"
+
+# - name: Download Prometheus gpg key
+#   ansible.builtin.get_url:
+#     url: https://packages.grafana.com/gpg.key
+#     dest: /tmp/prometheus_gpg.key
+#   become: true
+#   tags: prometheus_install
+#   when: ansible_os_family == "RedHat"
+
+
+# - name: Install Prometheus
+#   ansible.builtin.package:
+#     name: "{{ prometheus_install_package }}"
+#     state: present
+#   become: true
+#   tags: prometheus_install
+#   when: ansible_os_family == "RedHat"
+
+# - name: Install Node Exporter
+#   ansible.builtin.package:
+#     name: "{{ node_exporter_install_package }}"
+#     state: present
+#   become: true
+#   tags: node_exporter_install
+#   when: ansible_os_family == "RedHat"
+
+# - name: Install Alertmanager
+#   ansible.builtin.package:
+#     name: "{{ alertmanager_install_package }}"
+#     state: present
+#   become: true
+#   tags: alertmanager_install
+#   when: ansible_os_family == "RedHat"
