@@ -1,5 +1,5 @@
 # ansible-playbook -i production site.yaml -t tag1,tag2
-- name: Import Jenkins Playbook
+- name: Import Web Playbook
   ansible.builtin.import_playbook: jenkins.yaml
 
 - name: Import Jenkins Agents Playbook
@@ -8,8 +8,8 @@
 - name: Import Deploy Machines Playbook
   ansible.builtin.import_playbook: deploy_machines.yaml
 
-- name: Import Grafana Playbook
-  ansible.builtin.import_playbook: grafana.yaml
+# - name: Import Grafana Playbook
+#   ansible.builtin.import_playbook: grafana.yaml
 
 # - name: Import Prometheus Playbook
 #   ansible.builtin.import_playbook: prometheus.yaml

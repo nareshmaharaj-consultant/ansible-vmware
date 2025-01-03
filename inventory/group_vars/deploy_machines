@@ -71,7 +71,5 @@ scala_binary: /home/devops1/.local/share/coursier/bin/scala
 # Scala download urls are defined in the roles/scala/defaults/main.yml file
 
 mongodb_version: 6.0
-# mongodb_arch_i4: aarch64    # mac i4
-# mongodb_arch_x86_64: x86_64 # intel
 mongodb_os: redhat
 mongodb_os_ver: 9

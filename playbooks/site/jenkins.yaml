@@ -1,5 +1,6 @@
-- name: Jenkins Define Roles
-  hosts: jenkins
+- name: Web Define Roles
+  hosts: web
   roles:
     - common
     - jenkins
+    - grafana

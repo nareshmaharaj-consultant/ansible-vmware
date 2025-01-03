@@ -1,5 +1,0 @@
-- name: Grafana Define Roles
-  hosts: grafana
-  roles:
-    - common
-    - grafana
