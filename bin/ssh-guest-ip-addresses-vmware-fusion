@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# List of VMs
+vms=("broker01" "broker02" "broker03" "broker04" "broker05" "broker06")
+
+# Loop through each VM
+for vm in "${vms[@]}"
+do
+  ip=`vmrun getGuestIPAddress /Users/nmaharaj/Virtual\ Machines.localized/$vm.vmwarevm/$vm.vmx`
+  echo "  - $ip $vm"
+done
+
