@@ -1,12 +1,9 @@
+# How to get hosts IP address for each vm
+# vmrun getGuestIPAddress /Users/nmaharaj/Virtual\ Machines.localized/broker01.vmwarevm/broker01.vmx
+# > 172.16.5.145
 all:
   vars:
     global:
-      hostnames_env:
-        - 172.16.5.145 broker01 jenkins
-        - 172.16.5.146 broker02 jenkins-node
-        - 172.16.5.144 broker03
-        - 172.16.5.147 broker04
-        - 172.16.5.148 broker05
   hosts:
     broker01:
       ansible_host: broker01
@@ -39,6 +36,12 @@ all:
       ansible_ssh_private_key_file: private_key
       ansible_python_interpreter: /usr/bin/python
       ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+    broker06:
+      ansible_host: broker06
+      ansible_ssh_user: devops1
+      ansible_ssh_private_key_file: private_key
+      ansible_python_interpreter: /usr/bin/python
+      ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
   children:
     web:
       hosts:
@@ -57,6 +60,7 @@ all:
         broker03:
         broker04:
         broker05:
+        broker06:
     all_machines:
       children:
         jenkins:

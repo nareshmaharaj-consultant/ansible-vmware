@@ -1,9 +1,30 @@
+- name: Debug Message
+  ansible.builtin.debug:
+    msg: "{{ macbook_type }}"
+  when: macbook_type is defined and macbook_type == "m4"
+  tags: macbook_type
+
+- name: Get ansible host Info
+  ansible.builtin.command:
+    cmd: "/Users/nmaharaj/bin/ssh-guest-ip-addresses.sh"
+  register: global_hosts_info
+  delegate_to: localhost
+  changed_when: false
+  when: macbook_type is defined and macbook_type == "m4"
+  tags: host_name_local
+
+- name: Set global_hosts_info
+  ansible.builtin.set_fact:
+    global_hostnames_env: "{{ global_hosts_info.stdout_lines }}"
+  when: macbook_type is defined and macbook_type == "m4"
+  tags: host_name_local
+
 - name: "Update Hosts file /etc/hosts"
   ansible.builtin.lineinfile:
     path: /etc/hosts
     state: present
     line: "{{ item }}"
-  loop: "{{ global.hostnames_env }}"
+  loop: "{{ global_hostnames_env }}"
   tags: host_name
   become: true
 
