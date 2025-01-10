@@ -6,7 +6,7 @@
 
 - name: Get ansible host Info
   ansible.builtin.command:
-    cmd: "/Users/nmaharaj/bin/ssh-guest-ip-addresses.sh"
+    cmd: "/Users/nmaharaj/my/ansible/bin/ssh-guest-ip-addresses-vmware-fusion"
   register: global_hosts_info
   delegate_to: localhost
   changed_when: false

@@ -8,5 +8,4 @@
   roles:
     - common
     - deploy_machines
-    - mongodb_repo
     - mongodb_install

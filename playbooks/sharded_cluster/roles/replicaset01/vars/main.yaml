@@ -1,19 +1,20 @@
 ---
-replicaset_admin_user: admin
-replicaset_admin_password: password1234
-replicaset_mongod_port: 27018
-replicaset_resize_mb: 2048
-replicaset_compact_role: true
-replicaset_repl_set_name: rs0
-replicaset_mongod_service: "mongod"
-replicaset_reboot_timeout: 3600
-replicaset_mongod_data_dir: "/var/lib/mongo"
-replicaset_mongos_port: 27017
-replicaset_members:
+replicaset01_admin_user: admin
+replicaset01_admin_password: password1234
+replicaset01_mongod_port: 27018
+# replicaset01_resize_mb: 2048
+replicaset01_compact_role: true
+replicaset01_repl_set_name: rs0
+replicaset01_mongod_service: "mongod"
+replicaset01_reboot_timeout: 3600
+replicaset01_mongod_data_dir: "/var/lib/mongo"
+replicaset01_mongod_log_dir: "/var/log/mongo"
+# replicaset01_mongos_port: 27017
+replicaset01_members:
   - "broker03:27018"
   - "broker04:27018"
   - "broker05:27018"
-replicaset_app_users:
+replicaset01_app_users:
   - username: "appuser1"
     password: "password1234"
     database: "appdb"

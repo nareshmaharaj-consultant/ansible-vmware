@@ -17,6 +17,7 @@
   ansible.builtin.get_url:
     url: https://rpm.grafana.com/gpg.key
     dest: /tmp/grafana_gpg.key
+    mode: '0600'
   become: true
   tags: grafana_install
   when: ansible_os_family == "RedHat"
@@ -55,7 +56,7 @@
   ansible.builtin.service:
     name: grafana-server
     state: started
-    daemon_reload: yes
+    daemon_reload: true
     enabled: true
   become: true
   tags: grafana_install

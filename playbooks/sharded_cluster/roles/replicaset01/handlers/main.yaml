@@ -1,7 +1,12 @@
-- name: Restart_mongod
-  ansible.builtin.systemd:
-    name: mongod
-    state: restarted
-    enabled: true
-  become: true
-  tags: mongodb
+# - name: Restart_mongod
+#   ansible.builtin.systemd:
+#     name: mongod
+#     state: restarted
+#     enabled: true
+#   become: true
+#   tags: mongodb
+
+- name: Wait for rs config to settle
+  ansible.builtin.pause:
+    seconds: 10
+  when: repl.changed

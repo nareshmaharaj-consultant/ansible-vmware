@@ -1,7 +1,7 @@
-# For the if statement in the tasks/main.yaml file, we need to check the architecture of the machine. 
-# We can do this by using the ansible_facts.architecture variable. 
-# This variable will return the architecture of the machine, which we can then use to determine 
-# the download URL for Scala. We can then use the get_url module to download the Scala package to the machine. 
+# For the if statement in the tasks/main.yaml file, we need to check the architecture of the machine.
+# We can do this by using the ansible_facts.architecture variable.
+# This variable will return the architecture of the machine, which we can then use to determine
+# the download URL for Scala. We can then use the get_url module to download the Scala package to the machine.
 # For this we need the variables to be defined in the defaults/main.yaml file.
-deploy_scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
-deploy_scala_download_url_x86: https://github.com/coursier/coursier/releases/latest/download/cs-x86_64-pc-linux.gz
+deploy_machines_scala_download_url_arm: https://github.com/VirtusLab/coursier-m1/releases/latest/download/cs-aarch64-pc-linux.gz
+deploy_machines_scala_download_url_x86: https://github.com/coursier/coursier/releases/latest/download/cs-x86_64-pc-linux.gz

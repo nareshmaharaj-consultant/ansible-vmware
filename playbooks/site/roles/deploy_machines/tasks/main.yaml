@@ -46,9 +46,9 @@
   ansible.builtin.set_fact:
     scala_download_url: >-
       {% if ansible_facts.architecture == 'x86_64' %}
-        "{{deploy_scala_download_url_x86 | replace('"','') }}"
+        "{{ deploy_machines_scala_download_url_x86 | replace('"', '') }}"
       {% else %}
-        "{{deploy_scala_download_url_arm | replace('"','') }}"
+        "{{ deploy_machines_scala_download_url_arm | replace('"', '') }}"
       {% endif %}
   tags: scala1
 
@@ -59,7 +59,7 @@
 
 - name: Debug Print Scala Download URL
   ansible.builtin.debug:
-    msg: "{{ scala_download_url | replace(' ','') | replace('\"','') }}"
+    msg: "{{ scala_download_url | replace(' ', '') | replace('\"', '') }}"
   tags: scala1
 
 - name: Remove Scala Previous Install
@@ -70,7 +70,7 @@
 
 - name: Download Scala
   ansible.builtin.get_url:
-    url: "{{ scala_download_url | replace(' ','') | replace('\"','')  }}"
+    url: "{{ scala_download_url | replace(' ', '') | replace('\"', '') }}"
     dest: "{{ scala_install_loc }}"
     mode: '0766'
   when: scala_present.stdout.find('Scala') == -1
