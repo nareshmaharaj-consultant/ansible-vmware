@@ -7,6 +7,6 @@ vms=("broker01" "broker02" "broker03" "broker04" "broker05" "broker06")
 for vm in "${vms[@]}"
 do
   ip=`vmrun getGuestIPAddress /Users/nmaharaj/Virtual\ Machines.localized/$vm.vmwarevm/$vm.vmx`
-  echo "  - $ip $vm"
+  echo "$ip $vm"
 done
 

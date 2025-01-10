@@ -1,16 +1,13 @@
 ---
 # Default login credentials
-# mongosh --authenticationDatabase admin --host  0.0.0.0 --port 27018
+# mongosh --authenticationDatabase admin --host  0.0.0.0 --port 27018 -u admin -p password1234 ( failing )
 
-- name: Print Debug Info for Replicaset
-  ansible.builtin.debug:
-    msg: "The mongod_port is: {{ replicaset_mongod_port }}"
-  tags: debug_replicaset
-
-- name: Print Debug Info for Replicaset
-  ansible.builtin.debug:
-    msg: "The replicaset_members is: {{ replicaset_members }}"
-  tags: debug_replicaset
+- name: Set sestatus to permissive
+  ansible.posix.selinux:
+    state: permissive
+    policy: targeted
+  become: true
+  tags: sestatus
 
 - name: Replace mongod.conf with template
   ansible.builtin.template:
@@ -19,9 +16,10 @@
     owner: mongod
     group: mongod
     mode: '0644'
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
   become: true
-  notify:
-    - restart_mongod
+  # notify:
+  #   - Restart_mongod
   tags: mongod_config
 
 - name: Ensure Mongodb is running
@@ -29,6 +27,7 @@
     name: mongod
     state: started
     enabled: true
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
   become: true
   tags: mongod_config
 
@@ -36,64 +35,144 @@
   community.mongodb.mongodb_replicaset:
     login_database: "admin"
     login_host: localhost
-    login_port: "{{ replicaset_mongod_port }}"
-    replica_set: "{{ replicaset_repl_set_name }}"
-    members: "{{ replicaset_members }}"
+    login_port: "{{ replicaset01_mongod_port }}"
+    replica_set: "{{ replicaset01_repl_set_name }}"
+    members: "{{ replicaset01_members }}"
+  when: ansible_nodename in ['broker03']
+  become: true
   notify:
     - Wait for rs config to settle
   register: repl
 
-- name: Wait for rs config to settle
-  ansible.builtin.pause:
-    seconds: 5
-  when: repl.changed
-
 - name: Has MongoDB Admin User been created already?
   ansible.builtin.stat:
     path: /root/mongodb_admin.success
+  when: ansible_nodename in ['broker03']
   register: mongodb_admin
+  tags: mongodb_admin_1
+
+- name: Print Debug of mongodb_admin
+  ansible.builtin.debug:
+    var: mongodb_admin.stat.exists
+  when: ansible_nodename in ['broker03']
+  tags: mongodb_admin_1
 
 - name: Ensure replicaset has reached a converged state
   community.mongodb.mongodb_status:
-    replica_set: "{{ replicaset_repl_set_name }}"
-    login_port: "{{ replicaset_mongod_port }}"
+    replica_set: "{{ replicaset01_repl_set_name }}"
+    login_port: "{{ replicaset01_mongod_port }}"
     poll: 10
     interval: 10
   when: repl.changed
 
 - name: Add MongoDB Admin User using localhost exception
   community.mongodb.mongodb_user:
-    name: "{{ replicaset_admin_user }}"
-    password: "{{ replicaset_admin_user_password }}"
-    login_port: "{{ replicaset_mongod_port }}"
+    name: "{{ replicaset01_admin_user }}"
+    password: "{{ replicaset01_admin_password }}"
+    login_port: "{{ replicaset01_mongod_port }}"
+    login_host: localhost
     database: admin
     roles:
       - "root"
-  when: not mongodb_admin.stat.exists
+      - "userAdminAnyDatabase"
+      - "dbAdminAnyDatabase"
+      - "clusterAdmin"
+      - "readWriteAnyDatabase"
+      - "restore"
+      - "backup"
+  when: ansible_nodename in ['broker03'] and not mongodb_admin.stat.exists
+  tags: mongodb_admin_1
 
 - name: Evaluate mongod success with admin user
   ansible.builtin.shell: |
-    mongo admin --port {{ replicaset_mongod_port }} \
-    --username {{ replicaset_admin_user }} \
-    --password {{ replicaset_admin_user_password }} \
+    mongosh admin --port {{ replicaset01_mongod_port }} \
+    --username {{ replicaset01_admin_user }} \
+    --password {{ replicaset01_admin_password }} \
     --eval 'db.runCommand({listDatabases: 1})' && \
     touch /root/mongodb_admin.success
   args:
     creates: /root/mongodb_admin.success
-  when: not mongodb_admin.stat.exists
+  when: ansible_nodename in ['broker03'] and not mongodb_admin.stat.exists
   ignore_errors: false
 
 - name: Add MongoDB App Users on the replicaset
   community.mongodb.mongodb_user:
-    login_user: "{{ replicaset_admin_user }}"
-    login_password: "{{ replicaset_admin_user_password }}"
-    login_port: "{{ replicaset_mongod_port }}"
+    login_user: "{{ replicaset01_admin_user }}"
+    login_password: "{{ replicaset01_admin_password }}"
+    login_port: "{{ replicaset01_mongod_port }}"
     login_database: admin
     user: "{{ item.username }}"
     password: "{{ item.password }}"
     database: "{{ item.database }}"
     roles: "{{ item.roles }}"
     update_password: "on_create"
+  when: ansible_nodename in ['broker03']
   with_items:
-    - "{{ replicaset_app_users }}"
-  no_log: true
+    - "{{ replicaset01_app_users }}"
+  no_log: false
+
+
+- name: Stop MongoDB Service
+  ansible.builtin.systemd:
+    name: mongod
+    state: stopped
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
+  become: true
+  tags:
+    - mongodb_delete
+    - never
+
+- name: Delete MongoDB data directory Contents
+  ansible.builtin.file:
+    path: "{{ replicaset01_mongod_data_dir }}"  # /var/lib/mongo
+    state: absent
+  become: true
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
+  tags:
+    - mongodb_delete
+    - never
+- name: Create MongoDB data directory
+  ansible.builtin.file:
+    path: "{{ replicaset01_mongod_data_dir }}"  # /var/lib/mongo
+    state: directory
+    owner: mongod
+    group: mongod
+    mode: '0755'
+  become: true
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
+  tags:
+    - mongodb_delete
+    - never
+
+- name: Delete MongoDB logs
+  ansible.builtin.file:
+    path: "{{ replicaset01_mongod_log_dir }}"  # /var/log/mongodb
+    state: absent
+  become: true
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
+  tags:
+    - mongodb_delete
+    - never
+
+- name: Create MongoDB log directory
+  ansible.builtin.file:
+    path: "{{ replicaset01_mongod_log_dir }}"  # /var/log/mongodb
+    state: directory
+    owner: mongod
+    group: mongod
+    mode: '0755'
+  become: true
+  when: ansible_nodename in ['broker03', 'broker04', 'broker05']
+  tags:
+    - mongodb_delete
+    - never
+
+- name: Delete File
+  ansible.builtin.file:
+    path: /root/mongodb_admin.success
+    state: absent
+  when: ansible_nodename in ['broker03']
+  become: true
+  tags:
+    - mongodb_delete
+    - never

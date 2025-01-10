@@ -7,7 +7,7 @@
 systemLog:
   destination: file
   logAppend: true
-  path: /var/log/mongodb/mongod.log
+  path: {{ replicaset01_mongod_log_dir }}/mongod.log
 
 # Where and how to store data.
 storage:
@@ -23,7 +23,7 @@ processManagement:
 
 # network interfaces
 net:
-  port: {{ replicaset_mongod_port }}
+  port: {{ replicaset01_mongod_port }}
   bindIp: 0.0.0.0
 
 security:
@@ -33,7 +33,7 @@ security:
 #operationProfiling:
 
 replication:
-  replSetName: {{ replicaset_repl_set_name}}
+  replSetName: {{ replicaset01_repl_set_name}}
 
 sharding:
   clusterRole: shardsvr

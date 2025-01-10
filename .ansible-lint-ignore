@@ -2,3 +2,4 @@
 # roles/mongodb/tasks/main.yaml command-instead-of-module
 playbooks/sharded_cluster/sharded_cluster_mongodb.yaml var-naming[no-role-prefix]
 playbooks/sharded_cluster/roles/replicaset/tasks/main.yaml no-handler
+playbooks/sharded_cluster/roles/replicaset01/tasks/main.yaml no-handler
